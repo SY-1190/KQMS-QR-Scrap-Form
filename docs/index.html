@@ -683,7 +683,214 @@
       padding: 7px 10px;
       border-radius: 999px;
       color: var(--green);
-      background: var(--green-s…2020 tokens truncated…             <span>폐기</span>
+      background: var(--green-soft);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    dl { display: grid; gap: 12px; margin: 16px 0 0; }
+    dl div { display: grid; grid-template-columns: minmax(82px, .8fr) minmax(0, 1.7fr); gap: 10px; font-size: 13px; }
+    dt { color: var(--muted); }
+    dd { margin: 0; overflow-wrap: anywhere; font-weight: 800; text-align: right; }
+    .safe-note {
+      display: flex;
+      gap: 12px;
+      margin-top: 17px;
+      padding: 15px;
+      border: 1px solid #c8d7ef;
+      border-radius: 12px;
+      color: #244066;
+      background: #edf4ff;
+    }
+    .safe-note > i { color: var(--blue); font-size: 20px; }
+    .safe-note strong { font-size: 12px; }
+    .safe-note p { margin: 5px 0 0; color: #536783; font-size: 10px; line-height: 1.55; }
+
+    .success { padding-top: 48px; text-align: center; }
+    .success-mark {
+      display: grid;
+      width: 104px;
+      height: 104px;
+      margin: 0 auto 24px;
+      place-items: center;
+      border-radius: 28px;
+      color: var(--green);
+      background: var(--green-soft);
+      font-size: 50px;
+      animation: pop 520ms cubic-bezier(.34, 1.56, .64, 1) both;
+    }
+    .success-copy { margin-bottom: 22px; }
+    .receipt { text-align: left; }
+    .receipt-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #e8edf6;
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .not-saved {
+      padding: 6px 9px;
+      border-radius: 999px;
+      color: var(--amber);
+      background: var(--amber-soft);
+      font-size: 9px;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 50;
+      right: 20px;
+      bottom: 24px;
+      left: 20px;
+      width: min(calc(100% - 40px), 500px);
+      margin: auto;
+      padding: 13px 16px;
+      border-radius: 10px;
+      color: #fff;
+      background: #27344a;
+      box-shadow: 0 12px 30px rgba(14, 25, 46, .25);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      animation: toast 240ms ease-out both;
+    }
+
+    @keyframes enter { from { opacity: 0; transform: translateY(10px); } }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 13px rgba(11, 78, 199, 0); } }
+    @keyframes scan { 0%, 100% { top: 15px; } 50% { top: calc(100% - 17px); } }
+    @keyframes pop { from { opacity: 0; transform: scale(.72); } }
+    @keyframes toast { from { opacity: 0; transform: translateY(8px); } }
+
+    @media (max-width: 540px) {
+      .brand { gap: 6px; font-size: 15px; }
+      .brand-icon { width: 28px; height: 28px; font-size: 13px; }
+      .grid { grid-template-columns: 1fr; }
+      .part-line-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .photos { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <button id="back" class="back is-invisible" type="button" aria-label="이전 단계">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <span class="brand-icon"><i class="bi bi-qr-code-scan" aria-hidden="true"></i></span>
+        <span>KQMS 공정부적합 신고</span>
+      </div>
+      <span class="test-badge">TEST</span>
+    </header>
+
+    <div class="notice" role="note">
+      <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+      공개 테스트 · 입력 내용과 사진은 저장되지 않습니다.
+    </div>
+
+    <nav class="steps" aria-label="등록 진행 단계">
+      <div class="step active" data-step="0"><b>1</b><small>QR 확인</small></div>
+      <div class="step" data-step="1"><b>2</b><small>정보 입력</small></div>
+      <div class="step" data-step="2"><b>3</b><small>사진·확인</small></div>
+      <div class="step" data-step="3"><b>4</b><small>테스트 완료</small></div>
+    </nav>
+
+    <section id="scan-screen" class="screen">
+      <div class="scanner" aria-hidden="true">
+        <div class="scanner-frame"><i class="bi bi-qr-code"></i></div>
+      </div>
+      <div class="intro center">
+        <p class="eyebrow">PUBLIC FLOW TEST</p>
+        <h1>공정 QR 코드를<br>스캔해주세요</h1>
+        <p>공정에 부착된 QR을 스캔하면 해당 공정이 자동입력된 신고 Form이 열립니다.</p>
+      </div>
+      <button id="sample-scan" class="primary" type="button">
+        <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
+        테스트 QR 스캔
+      </button>
+      <div class="divider"><span>또는</span></div>
+      <form id="manual-form" class="manual">
+        <label for="manual-qr">QR 식별값 직접 입력</label>
+        <input id="manual-qr" autocomplete="off" placeholder="QR-PROCESS-TEST-ASSEMBLY">
+        <button class="secondary" type="submit">등록 Form 열기</button>
+      </form>
+      <details class="qr-test">
+        <summary><i class="bi bi-phone" aria-hidden="true"></i> 실제 공정 QR 스캔 테스트</summary>
+        <div class="qr-test-body">
+          <img src="./process-test-qr.svg" alt="조립 공정 공개 테스트 QR 코드">
+          <strong>TEST-PR-001 · 조립 공정</strong>
+          <p>PC나 태블릿에 이 QR을 표시한 뒤 스마트폰 기본 카메라로 스캔하세요.</p>
+          <a class="qr-test-link" href="?qr=QR-PROCESS-TEST-ASSEMBLY">
+            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> 이 기기에서 Form 열기
+          </a>
+        </div>
+      </details>
+      <p class="footnote">
+        <i class="bi bi-shield-check" aria-hidden="true"></i>
+        QR에는 테스트 공정 식별값과 공개 Form 링크만 포함됩니다.
+      </p>
+    </section>
+
+    <section id="form-screen" class="screen" hidden>
+      <div class="intro">
+        <p class="eyebrow">STEP 2 · REPORT DETAILS</p>
+        <h1>공정부적합 신고</h1>
+        <p>신고 유형과 처리 구분을 선택한 뒤 테스트 정보를 입력해주세요.</p>
+      </div>
+      <div class="qr-result">
+        <span class="qr-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></span>
+        <div>
+          <small>확인된 공정 QR</small>
+          <strong id="qr-result">-</strong>
+        </div>
+        <span class="check-badge"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 확인</span>
+      </div>
+
+      <div class="section-title">
+        <span>신고 분류</span>
+        <small><span class="required">*</span> 필수 선택</small>
+      </div>
+
+      <form id="report-form">
+        <fieldset class="choice-field">
+          <legend>신고 유형 <span class="required">*</span></legend>
+          <div class="choice-grid">
+            <label class="choice-option">
+              <input type="radio" name="submission-type" value="자진신고" required>
+              <i class="bi bi-person-check" aria-hidden="true"></i>
+              <span>자진신고</span>
+            </label>
+            <label class="choice-option">
+              <input type="radio" name="submission-type" value="보물찾기" required>
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <span>보물찾기</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="choice-field">
+          <legend>처리 구분 <span class="required">*</span></legend>
+          <div class="choice-grid">
+            <label class="choice-option">
+              <input type="radio" name="disposition" value="수정" required>
+              <i class="bi bi-tools" aria-hidden="true"></i>
+              <span>수정</span>
+            </label>
+            <label class="choice-option discard">
+              <input type="radio" name="disposition" value="폐기" required>
+              <i class="bi bi-recycle" aria-hidden="true"></i>
+              <span>폐기</span>
             </label>
           </div>
           <small>폐기를 선택한 신고는 폐기 등록/진행 대상으로 분류됩니다.</small>
@@ -1160,4 +1367,3 @@
   </script>
 </body>
 </html>
-
