@@ -974,7 +974,7 @@
         state.qr = qr;
         state.process = process;
         $("qr-result").textContent = qr;
-        $("process").value = `${process.code} · ${process.name}`;
+        $("process").value = process.name;
         if (withSample) {
           selectChoice("submission-type", "자진신고");
           selectChoice("disposition", "폐기");
