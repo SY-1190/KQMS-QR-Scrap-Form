@@ -276,6 +276,62 @@
       background: #fbfcff;
     }
     .manual .secondary { width: 100%; }
+    .qr-test {
+      margin-top: 16px;
+      border: 1px solid #bdd0f3;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .qr-test summary {
+      display: flex;
+      min-height: 50px;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 15px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      list-style: none;
+    }
+    .qr-test summary::-webkit-details-marker { display: none; }
+    .qr-test summary::after {
+      margin-left: auto;
+      font-family: bootstrap-icons;
+      content: "\f282";
+      transition: transform 180ms ease;
+    }
+    .qr-test[open] summary::after { transform: rotate(180deg); }
+    .qr-test-body {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      padding: 0 16px 18px;
+      border-top: 1px solid #e7edf8;
+      text-align: center;
+    }
+    .qr-test-body img {
+      width: 220px;
+      max-width: 76%;
+      margin-top: 16px;
+      border: 10px solid #fff;
+      image-rendering: pixelated;
+    }
+    .qr-test-body strong { font-size: 13px; }
+    .qr-test-body p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .qr-test-link {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 13px;
+      border-radius: 9px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-size: 12px;
+      font-weight: 900;
+      text-decoration: none;
+    }
     .footnote {
       display: flex;
       align-items: flex-start;
@@ -383,6 +439,18 @@
     .field { display: grid; gap: 7px; }
     .field.full { grid-column: 1 / -1; }
     .field > span { font-size: 13px; font-weight: 900; }
+    .auto-chip {
+      display: inline-flex;
+      margin-left: 5px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-size: 9px;
+      font-style: normal;
+      font-weight: 900;
+      vertical-align: middle;
+    }
     .field input, .field select, .field textarea {
       width: 100%;
       min-height: 52px;
@@ -392,6 +460,13 @@
       color: var(--ink);
       background: #fff;
       transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .field input[readonly] {
+      border-color: #bdd0f3;
+      color: #174b9c;
+      background: var(--blue-soft);
+      font-weight: 900;
+      cursor: not-allowed;
     }
     .field textarea { min-height: 110px; resize: vertical; }
     .field input:focus, .field select:focus, .field textarea:focus {
@@ -619,8 +694,8 @@
       </div>
       <div class="intro center">
         <p class="eyebrow">PUBLIC FLOW TEST</p>
-        <h1>공정부적합 QR 코드를<br>스캔해주세요</h1>
-        <p>QR 식별값을 확인한 뒤 모바일 공정부적합 신고 Form이 열립니다.</p>
+        <h1>공정 QR 코드를<br>스캔해주세요</h1>
+        <p>공정에 부착된 QR을 스캔하면 해당 공정이 자동입력된 신고 Form이 열립니다.</p>
       </div>
       <button id="sample-scan" class="primary" type="button">
         <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
@@ -629,12 +704,23 @@
       <div class="divider"><span>또는</span></div>
       <form id="manual-form" class="manual">
         <label for="manual-qr">QR 식별값 직접 입력</label>
-        <input id="manual-qr" autocomplete="off" placeholder="예: QR-TEST-001">
+        <input id="manual-qr" autocomplete="off" placeholder="QR-PROCESS-TEST-ASSEMBLY">
         <button class="secondary" type="submit">등록 Form 열기</button>
       </form>
+      <details class="qr-test">
+        <summary><i class="bi bi-phone" aria-hidden="true"></i> 실제 공정 QR 스캔 테스트</summary>
+        <div class="qr-test-body">
+          <img src="./process-test-qr.svg" alt="조립 공정 공개 테스트 QR 코드">
+          <strong>TEST-PR-001 · 조립 공정</strong>
+          <p>PC나 태블릿에 이 QR을 표시한 뒤 스마트폰 기본 카메라로 스캔하세요.</p>
+          <a class="qr-test-link" href="?qr=QR-PROCESS-TEST-ASSEMBLY">
+            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> 이 기기에서 Form 열기
+          </a>
+        </div>
+      </details>
       <p class="footnote">
         <i class="bi bi-shield-check" aria-hidden="true"></i>
-        공개 테스트에는 실제 품질 데이터나 민감정보를 입력하지 마세요.
+        QR에는 테스트 공정 식별값과 공개 Form 링크만 포함됩니다.
       </p>
     </section>
 
@@ -647,7 +733,7 @@
       <div class="qr-result">
         <span class="qr-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></span>
         <div>
-          <small>확인된 QR 식별값</small>
+          <small>확인된 공정 QR</small>
           <strong id="qr-result">-</strong>
         </div>
         <span class="check-badge"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 확인</span>
@@ -710,8 +796,8 @@
             <input id="part" required placeholder="테스트 품번">
           </label>
           <label class="field">
-            <span>발생 공정 <span class="required">*</span></span>
-            <input id="process" required placeholder="예: 조립">
+            <span>발생 공정 <span class="required">*</span><em class="auto-chip">QR 자동입력</em></span>
+            <input id="process" required readonly aria-readonly="true">
           </label>
           <label class="field">
             <span>불량 유형 <span class="required">*</span></span>
@@ -829,10 +915,15 @@
       const state = {
         step: 0,
         qr: "",
+        process: null,
         photos: []
       };
 
       const $ = (id) => document.getElementById(id);
+      const testProcessQrCode = "QR-PROCESS-TEST-ASSEMBLY";
+      const testProcessQrCatalog = Object.freeze({
+        [testProcessQrCode]: { code: "TEST-PR-001", name: "조립 공정" }
+      });
       const now = new Date();
       const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       $("date").value = today;
@@ -875,13 +966,19 @@
       }
 
       function openForm(qr, withSample) {
+        const process = testProcessQrCatalog[qr];
+        if (!process) {
+          showToast("등록되지 않은 테스트 공정 QR입니다.");
+          return;
+        }
         state.qr = qr;
+        state.process = process;
         $("qr-result").textContent = qr;
+        $("process").value = `${process.code} · ${process.name}`;
         if (withSample) {
           selectChoice("submission-type", "자진신고");
           selectChoice("disposition", "폐기");
           $("part").value = "TEST-CX200";
-          $("process").value = "조립";
           $("defect").value = "외관 손상";
           $("quantity").value = "2";
           $("method").value = "위탁 처리";
@@ -936,6 +1033,7 @@
         state.photos.forEach((photo) => URL.revokeObjectURL(photo.url));
         state.photos = [];
         state.qr = "";
+        state.process = null;
         $("manual-qr").value = "";
         $("report-form").reset();
         $("date").value = today;
@@ -945,7 +1043,7 @@
         setStep(0);
       }
 
-      $("sample-scan").addEventListener("click", () => openForm("QR-PUBLIC-TEST-001", true));
+      $("sample-scan").addEventListener("click", () => openForm(testProcessQrCode, true));
 
       $("manual-form").addEventListener("submit", (event) => {
         event.preventDefault();
