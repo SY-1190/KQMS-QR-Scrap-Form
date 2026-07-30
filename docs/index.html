@@ -451,6 +451,7 @@
       font-weight: 900;
       vertical-align: middle;
     }
+    .optional-text { color: var(--muted); font-size: 10px; font-style: normal; font-weight: 700; }
     .field input, .field select, .field textarea {
       width: 100%;
       min-height: 52px;
@@ -1128,8 +1129,8 @@
                 <input required placeholder="품번 수기입력">
               </label>
               <label class="field">
-                <span>모델</span>
-                <input placeholder="모델명">
+                <span>모델 <em class="optional-text">(선택)</em></span>
+                <input placeholder="검색 시 자동입력 · 수기 가능">
               </label>
               <label class="field">
                 <span>수량 <span class="required">*</span></span>
