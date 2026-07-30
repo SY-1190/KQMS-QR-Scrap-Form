@@ -468,6 +468,123 @@
       font-weight: 900;
       cursor: not-allowed;
     }
+    .part-entry {
+      display: grid;
+      gap: 13px;
+      margin-bottom: 17px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .part-entry-head, .part-line-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .part-entry-head > div { display: grid; gap: 4px; }
+    .part-entry-head strong { font-size: 14px; }
+    .part-entry-head strong b { color: var(--red); }
+    .part-entry-head small, .part-search-message, .part-empty { color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .part-count {
+      padding: 6px 8px;
+      border-radius: 999px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .part-search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+    .part-search-row label { position: relative; }
+    .part-search-row label i {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+      color: var(--blue);
+      transform: translateY(-50%);
+    }
+    .part-search-row input {
+      width: 100%;
+      min-height: 52px;
+      padding: 13px 14px 13px 42px;
+      border: 1px solid #bec8da;
+      border-radius: 9px;
+    }
+    .part-search-row .secondary { min-width: 74px; }
+    .part-results, .part-lines { display: grid; gap: 9px; }
+    .part-results button {
+      display: flex;
+      min-height: 54px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 13px;
+      border: 1px solid #bdd0f3;
+      border-radius: 10px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      text-align: left;
+    }
+    .part-results button span { display: grid; gap: 3px; }
+    .part-results button small { color: #52627d; font-size: 10px; }
+    .manual-part {
+      min-height: 46px;
+      border: 1px dashed #9bb4dc;
+      border-radius: 10px;
+      color: var(--blue);
+      background: #f7f9ff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .part-line {
+      padding: 13px;
+      border: 1px solid #d7dfed;
+      border-radius: 11px;
+      background: #f8faff;
+    }
+    .part-line-head strong { font-size: 12px; }
+    .part-line-head button {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      color: var(--red);
+      background: #fff;
+    }
+    .part-line-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr .75fr;
+      gap: 9px;
+    }
+    .unit-field { position: relative; }
+    .unit-field input { padding-right: 43px; }
+    .unit-field span {
+      position: absolute;
+      top: 50%;
+      right: 13px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      transform: translateY(-50%);
+    }
+    .part-empty {
+      margin: 0;
+      padding: 17px;
+      border: 1px dashed #c7d2e5;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .part-search-message { margin: -3px 0 0; color: #7a4b00; font-weight: 800; }
+    .part-summary-list { display: grid; gap: 5px; }
+    .part-summary-list span { display: block; }
     .field textarea { min-height: 110px; resize: vertical; }
     .field input:focus, .field select:focus, .field textarea:focus {
       border-color: var(--blue);
@@ -566,213 +683,7 @@
       padding: 7px 10px;
       border-radius: 999px;
       color: var(--green);
-      background: var(--green-soft);
-      font-size: 10px;
-      font-weight: 900;
-    }
-    dl { display: grid; gap: 12px; margin: 16px 0 0; }
-    dl div { display: grid; grid-template-columns: minmax(82px, .8fr) minmax(0, 1.7fr); gap: 10px; font-size: 13px; }
-    dt { color: var(--muted); }
-    dd { margin: 0; overflow-wrap: anywhere; font-weight: 800; text-align: right; }
-    .safe-note {
-      display: flex;
-      gap: 12px;
-      margin-top: 17px;
-      padding: 15px;
-      border: 1px solid #c8d7ef;
-      border-radius: 12px;
-      color: #244066;
-      background: #edf4ff;
-    }
-    .safe-note > i { color: var(--blue); font-size: 20px; }
-    .safe-note strong { font-size: 12px; }
-    .safe-note p { margin: 5px 0 0; color: #536783; font-size: 10px; line-height: 1.55; }
-
-    .success { padding-top: 48px; text-align: center; }
-    .success-mark {
-      display: grid;
-      width: 104px;
-      height: 104px;
-      margin: 0 auto 24px;
-      place-items: center;
-      border-radius: 28px;
-      color: var(--green);
-      background: var(--green-soft);
-      font-size: 50px;
-      animation: pop 520ms cubic-bezier(.34, 1.56, .64, 1) both;
-    }
-    .success-copy { margin-bottom: 22px; }
-    .receipt { text-align: left; }
-    .receipt-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 14px;
-      border-bottom: 1px solid #e8edf6;
-      font-size: 14px;
-      font-weight: 900;
-    }
-    .not-saved {
-      padding: 6px 9px;
-      border-radius: 999px;
-      color: var(--amber);
-      background: var(--amber-soft);
-      font-size: 9px;
-    }
-
-    .toast {
-      position: fixed;
-      z-index: 50;
-      right: 20px;
-      bottom: 24px;
-      left: 20px;
-      width: min(calc(100% - 40px), 500px);
-      margin: auto;
-      padding: 13px 16px;
-      border-radius: 10px;
-      color: #fff;
-      background: #27344a;
-      box-shadow: 0 12px 30px rgba(14, 25, 46, .25);
-      font-size: 12px;
-      font-weight: 800;
-      text-align: center;
-      animation: toast 240ms ease-out both;
-    }
-
-    @keyframes enter { from { opacity: 0; transform: translateY(10px); } }
-    @keyframes pulse { 50% { box-shadow: 0 0 0 13px rgba(11, 78, 199, 0); } }
-    @keyframes scan { 0%, 100% { top: 15px; } 50% { top: calc(100% - 17px); } }
-    @keyframes pop { from { opacity: 0; transform: scale(.72); } }
-    @keyframes toast { from { opacity: 0; transform: translateY(8px); } }
-
-    @media (max-width: 540px) {
-      .brand { gap: 6px; font-size: 15px; }
-      .brand-icon { width: 28px; height: 28px; font-size: 13px; }
-      .grid { grid-template-columns: 1fr; }
-      .field.full { grid-column: auto; }
-      .photos { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      *, *::before, *::after {
-        scroll-behavior: auto !important;
-        animation-duration: .01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: .01ms !important;
-      }
-    }
-  </style>
-</head>
-<body>
-  <main class="app">
-    <header class="topbar">
-      <button id="back" class="back is-invisible" type="button" aria-label="이전 단계">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i>
-      </button>
-      <div class="brand">
-        <span class="brand-icon"><i class="bi bi-qr-code-scan" aria-hidden="true"></i></span>
-        <span>KQMS 공정부적합 신고</span>
-      </div>
-      <span class="test-badge">TEST</span>
-    </header>
-
-    <div class="notice" role="note">
-      <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-      공개 테스트 · 입력 내용과 사진은 저장되지 않습니다.
-    </div>
-
-    <nav class="steps" aria-label="등록 진행 단계">
-      <div class="step active" data-step="0"><b>1</b><small>QR 확인</small></div>
-      <div class="step" data-step="1"><b>2</b><small>정보 입력</small></div>
-      <div class="step" data-step="2"><b>3</b><small>사진·확인</small></div>
-      <div class="step" data-step="3"><b>4</b><small>테스트 완료</small></div>
-    </nav>
-
-    <section id="scan-screen" class="screen">
-      <div class="scanner" aria-hidden="true">
-        <div class="scanner-frame"><i class="bi bi-qr-code"></i></div>
-      </div>
-      <div class="intro center">
-        <p class="eyebrow">PUBLIC FLOW TEST</p>
-        <h1>공정 QR 코드를<br>스캔해주세요</h1>
-        <p>공정에 부착된 QR을 스캔하면 해당 공정이 자동입력된 신고 Form이 열립니다.</p>
-      </div>
-      <button id="sample-scan" class="primary" type="button">
-        <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
-        테스트 QR 스캔
-      </button>
-      <div class="divider"><span>또는</span></div>
-      <form id="manual-form" class="manual">
-        <label for="manual-qr">QR 식별값 직접 입력</label>
-        <input id="manual-qr" autocomplete="off" placeholder="QR-PROCESS-TEST-ASSEMBLY">
-        <button class="secondary" type="submit">등록 Form 열기</button>
-      </form>
-      <details class="qr-test">
-        <summary><i class="bi bi-phone" aria-hidden="true"></i> 실제 공정 QR 스캔 테스트</summary>
-        <div class="qr-test-body">
-          <img src="./process-test-qr.svg" alt="조립 공정 공개 테스트 QR 코드">
-          <strong>TEST-PR-001 · 조립 공정</strong>
-          <p>PC나 태블릿에 이 QR을 표시한 뒤 스마트폰 기본 카메라로 스캔하세요.</p>
-          <a class="qr-test-link" href="?qr=QR-PROCESS-TEST-ASSEMBLY">
-            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> 이 기기에서 Form 열기
-          </a>
-        </div>
-      </details>
-      <p class="footnote">
-        <i class="bi bi-shield-check" aria-hidden="true"></i>
-        QR에는 테스트 공정 식별값과 공개 Form 링크만 포함됩니다.
-      </p>
-    </section>
-
-    <section id="form-screen" class="screen" hidden>
-      <div class="intro">
-        <p class="eyebrow">STEP 2 · REPORT DETAILS</p>
-        <h1>공정부적합 신고</h1>
-        <p>신고 유형과 처리 구분을 선택한 뒤 테스트 정보를 입력해주세요.</p>
-      </div>
-      <div class="qr-result">
-        <span class="qr-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></span>
-        <div>
-          <small>확인된 공정 QR</small>
-          <strong id="qr-result">-</strong>
-        </div>
-        <span class="check-badge"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 확인</span>
-      </div>
-
-      <div class="section-title">
-        <span>신고 분류</span>
-        <small><span class="required">*</span> 필수 선택</small>
-      </div>
-
-      <form id="report-form">
-        <fieldset class="choice-field">
-          <legend>신고 유형 <span class="required">*</span></legend>
-          <div class="choice-grid">
-            <label class="choice-option">
-              <input type="radio" name="submission-type" value="자진신고" required>
-              <i class="bi bi-person-check" aria-hidden="true"></i>
-              <span>자진신고</span>
-            </label>
-            <label class="choice-option">
-              <input type="radio" name="submission-type" value="보물찾기" required>
-              <i class="bi bi-search" aria-hidden="true"></i>
-              <span>보물찾기</span>
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset class="choice-field">
-          <legend>처리 구분 <span class="required">*</span></legend>
-          <div class="choice-grid">
-            <label class="choice-option">
-              <input type="radio" name="disposition" value="수정" required>
-              <i class="bi bi-tools" aria-hidden="true"></i>
-              <span>수정</span>
-            </label>
-            <label class="choice-option discard">
-              <input type="radio" name="disposition" value="폐기" required>
-              <i class="bi bi-recycle" aria-hidden="true"></i>
-              <span>폐기</span>
+      background: var(--green-s…2020 tokens truncated…             <span>폐기</span>
             </label>
           </div>
           <small>폐기를 선택한 신고는 폐기 등록/진행 대상으로 분류됩니다.</small>
@@ -783,11 +694,31 @@
           <small><span class="required">*</span> 필수 입력</small>
         </div>
 
+        <section class="part-entry" aria-labelledby="part-entry-title">
+          <div class="part-entry-head">
+            <div>
+              <strong id="part-entry-title">품번 및 수량 <b>*</b></strong>
+              <small>품번 또는 모델로 검색하고, 여러 품번을 추가할 수 있습니다.</small>
+            </div>
+            <span id="part-count" class="part-count">0개 품번</span>
+          </div>
+          <div class="part-search-row">
+            <label>
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input id="part-query" autocomplete="off" placeholder="품번 또는 모델 검색">
+            </label>
+            <button id="part-search" class="secondary" type="button">검색</button>
+          </div>
+          <div id="part-results" class="part-results" aria-label="품번 검색 결과" hidden></div>
+          <p id="part-search-message" class="part-search-message" role="status" hidden></p>
+          <button id="manual-part" class="manual-part" type="button">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i> 검색 없이 품번 수기작성
+          </button>
+          <div id="part-lines" class="part-lines"></div>
+          <p id="part-empty" class="part-empty"><i class="bi bi-box-seam" aria-hidden="true"></i> 추가된 품번이 없습니다.</p>
+        </section>
+
         <div class="grid">
-          <label class="field">
-            <span>품번 <span class="required">*</span></span>
-            <input id="part" required placeholder="테스트 품번">
-          </label>
           <label class="field">
             <span>발생 공정 <span class="required">*</span><em class="auto-chip">QR 자동입력</em></span>
             <input id="process" required readonly aria-readonly="true">
@@ -795,10 +726,6 @@
           <label class="field">
             <span>불량 유형 <span class="required">*</span></span>
             <input id="defect" required placeholder="예: 외관 손상">
-          </label>
-          <label class="field">
-            <span>수량 <span class="required">*</span></span>
-            <input id="quantity" type="number" inputmode="numeric" min="1" value="1" required>
           </label>
           <label class="field">
             <span>발생일 <span class="required">*</span></span>
@@ -847,9 +774,9 @@
         <dl>
           <div><dt>신고 유형</dt><dd id="summary-submission">-</dd></div>
           <div><dt>처리 구분</dt><dd id="summary-disposition">-</dd></div>
-          <div><dt>품번</dt><dd id="summary-part">-</dd></div>
+          <div><dt>품번별 수량</dt><dd id="summary-parts" class="part-summary-list">-</dd></div>
           <div><dt>공정 / 불량</dt><dd id="summary-process">-</dd></div>
-          <div><dt>수량 / 발생일</dt><dd id="summary-quantity">-</dd></div>
+          <div><dt>발생일</dt><dd id="summary-date">-</dd></div>
           <div id="summary-method-row" hidden><dt>폐기 방법</dt><dd id="summary-method">-</dd></div>
           <div><dt>사진</dt><dd id="summary-photos">0장</dd></div>
         </dl>
@@ -884,8 +811,7 @@
           <div><dt>테스트 번호</dt><dd id="test-number">-</dd></div>
           <div><dt>QR 식별값</dt><dd id="receipt-qr">-</dd></div>
           <div><dt>신고 유형</dt><dd id="receipt-submission">-</dd></div>
-          <div><dt>품번</dt><dd id="receipt-part">-</dd></div>
-          <div><dt>수량</dt><dd id="receipt-quantity">-</dd></div>
+          <div><dt>품번별 수량</dt><dd id="receipt-parts" class="part-summary-list">-</dd></div>
           <div><dt>처리 구분</dt><dd id="receipt-disposition">-</dd></div>
           <div><dt>사진</dt><dd id="receipt-photos">0장</dd></div>
         </dl>
@@ -909,6 +835,7 @@
         step: 0,
         qr: "",
         process: null,
+        parts: [],
         photos: []
       };
 
@@ -917,6 +844,11 @@
       const testProcessQrCatalog = Object.freeze({
         [testProcessQrCode]: { code: "TEST-PR-001", name: "조립 공정" }
       });
+      const testPartCatalog = Object.freeze([
+        { partNo: "PUMP-CX200", model: "CX-200" },
+        { partNo: "VALVE-A100", model: "A-100" },
+        { partNo: "SHAFT-S300", model: "S-300" }
+      ]);
       const now = new Date();
       const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       $("date").value = today;
@@ -958,6 +890,110 @@
         $("method").required = isDisposal;
       }
 
+      function createPart(partNo = "", model = "", quantity = "1") {
+        return { id: crypto.randomUUID(), partNo, model, quantity };
+      }
+
+      function renderPartSummary(targetId) {
+        const target = $(targetId);
+        target.replaceChildren();
+        state.parts.forEach((part) => {
+          const row = document.createElement("span");
+          row.textContent = `${part.partNo}${part.model ? ` · ${part.model}` : ""} · ${part.quantity}EA`;
+          target.append(row);
+        });
+      }
+
+      function renderPartLines() {
+        const lines = $("part-lines");
+        lines.replaceChildren();
+        state.parts.forEach((part, index) => {
+          const article = document.createElement("article");
+          article.className = "part-line";
+          article.innerHTML = `
+            <div class="part-line-head">
+              <strong>품번 ${index + 1}</strong>
+              <button type="button" aria-label="품번 ${index + 1} 삭제"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+            </div>
+            <div class="part-line-grid">
+              <label class="field">
+                <span>품번 <span class="required">*</span></span>
+                <input required placeholder="품번 수기입력">
+              </label>
+              <label class="field">
+                <span>모델</span>
+                <input placeholder="모델명">
+              </label>
+              <label class="field">
+                <span>수량 <span class="required">*</span></span>
+                <div class="unit-field">
+                  <input required type="number" inputmode="numeric" min="1" step="1">
+                  <span>EA</span>
+                </div>
+              </label>
+            </div>`;
+          const inputs = article.querySelectorAll("input");
+          inputs[0].value = part.partNo;
+          inputs[1].value = part.model;
+          inputs[2].value = part.quantity;
+          inputs[0].addEventListener("input", (event) => { part.partNo = event.target.value; });
+          inputs[1].addEventListener("input", (event) => { part.model = event.target.value; });
+          inputs[2].addEventListener("input", (event) => { part.quantity = event.target.value; });
+          article.querySelector("button").addEventListener("click", () => {
+            state.parts = state.parts.filter((item) => item.id !== part.id);
+            renderPartLines();
+          });
+          lines.append(article);
+        });
+        $("part-count").textContent = `${state.parts.length}개 품번`;
+        $("part-empty").hidden = state.parts.length > 0;
+      }
+
+      function addPart(part) {
+        if (part && state.parts.some((item) => item.partNo === part.partNo)) {
+          showToast("이미 추가된 품번입니다.");
+          return;
+        }
+        state.parts.push(createPart(part?.partNo || "", part?.model || ""));
+        $("part-search-message").hidden = true;
+        renderPartLines();
+      }
+
+      function searchParts() {
+        const query = $("part-query").value.trim().toLowerCase();
+        const results = $("part-results");
+        const message = $("part-search-message");
+        results.replaceChildren();
+        if (query.length < 2) {
+          results.hidden = true;
+          message.textContent = "품번 또는 모델을 2자 이상 입력해주세요.";
+          message.hidden = false;
+          return;
+        }
+        const matches = testPartCatalog.filter((part) =>
+          part.partNo.toLowerCase().includes(query) || part.model.toLowerCase().includes(query)
+        );
+        matches.forEach((part) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          const label = document.createElement("span");
+          const code = document.createElement("strong");
+          const model = document.createElement("small");
+          const icon = document.createElement("i");
+          code.textContent = part.partNo;
+          model.textContent = `모델 ${part.model}`;
+          icon.className = "bi bi-plus-circle";
+          icon.setAttribute("aria-hidden", "true");
+          label.append(code, model);
+          button.append(label, icon);
+          button.addEventListener("click", () => addPart(part));
+          results.append(button);
+        });
+        results.hidden = matches.length === 0;
+        message.textContent = matches.length ? "" : "검색 결과가 없습니다. 품번을 수기로 작성해주세요.";
+        message.hidden = matches.length > 0;
+      }
+
       function openForm(qr, withSample) {
         const process = testProcessQrCatalog[qr];
         if (!process) {
@@ -966,17 +1002,19 @@
         }
         state.qr = qr;
         state.process = process;
+        state.parts = withSample
+          ? [createPart("PUMP-CX200", "CX-200", "2"), createPart("VALVE-A100", "A-100", "3")]
+          : [];
         $("qr-result").textContent = qr;
         $("process").value = process.name;
         if (withSample) {
           selectChoice("submission-type", "자진신고");
           selectChoice("disposition", "폐기");
-          $("part").value = "TEST-CX200";
           $("defect").value = "외관 손상";
-          $("quantity").value = "2";
           $("method").value = "위탁 처리";
           $("memo").value = "공개 화면 검토를 위한 예시 입력입니다.";
         }
+        renderPartLines();
         syncDisposition();
         setStep(1);
       }
@@ -989,9 +1027,9 @@
         $("summary-submission").textContent = submissionType;
         $("summary-disposition").textContent = disposition;
         $("summary-decision").textContent = `${disposition} 접수 테스트`;
-        $("summary-part").textContent = $("part").value;
+        renderPartSummary("summary-parts");
         $("summary-process").textContent = `${$("process").value} / ${$("defect").value}`;
-        $("summary-quantity").textContent = `${$("quantity").value}EA / ${$("date").value}`;
+        $("summary-date").textContent = $("date").value;
         $("summary-method").textContent = $("method").value;
         $("summary-method-row").hidden = !isDisposal;
         $("summary-photos").textContent = `${state.photos.length}장`;
@@ -1027,16 +1065,31 @@
         state.photos = [];
         state.qr = "";
         state.process = null;
+        state.parts = [];
         $("manual-qr").value = "";
+        $("part-query").value = "";
+        $("part-results").replaceChildren();
+        $("part-results").hidden = true;
+        $("part-search-message").hidden = true;
         $("report-form").reset();
         $("date").value = today;
         syncDisposition();
+        renderPartLines();
         renderPhotos();
         history.replaceState({}, "", location.pathname);
         setStep(0);
       }
 
       $("sample-scan").addEventListener("click", () => openForm(testProcessQrCode, true));
+
+      $("part-search").addEventListener("click", searchParts);
+      $("part-query").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          searchParts();
+        }
+      });
+      $("manual-part").addEventListener("click", () => addPart());
 
       $("manual-form").addEventListener("submit", (event) => {
         event.preventDefault();
@@ -1050,6 +1103,14 @@
 
       $("report-form").addEventListener("submit", (event) => {
         event.preventDefault();
+        if (!state.parts.length || state.parts.some((part) => !part.partNo.trim())) {
+          showToast("품번을 검색해 선택하거나 수기로 입력해주세요.");
+          return;
+        }
+        if (state.parts.some((part) => !Number.isInteger(Number(part.quantity)) || Number(part.quantity) < 1)) {
+          showToast("각 품번의 수량을 1EA 이상 입력해주세요.");
+          return;
+        }
         refreshSummary();
         setStep(2);
       });
@@ -1079,8 +1140,7 @@
         $("test-number").textContent = `TEST-NC-${String(Date.now()).slice(-8)}`;
         $("receipt-qr").textContent = state.qr;
         $("receipt-submission").textContent = selectedChoice("submission-type");
-        $("receipt-part").textContent = $("part").value;
-        $("receipt-quantity").textContent = `${$("quantity").value}EA`;
+        renderPartSummary("receipt-parts");
         $("receipt-disposition").textContent = selectedChoice("disposition");
         $("receipt-photos").textContent = `${state.photos.length}장`;
         setStep(3);
