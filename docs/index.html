@@ -39,6 +39,7 @@
     }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .primary:disabled { cursor: wait; opacity: .68; box-shadow: none; }
     [hidden] { display: none !important; }
 
     .app {
@@ -951,14 +952,14 @@
 
     <div class="notice" role="note">
       <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-      공개 테스트 · 입력 내용과 사진은 저장되지 않습니다.
+      공개 테스트 · 서버에서 제출값만 검증하며 현재 KQMS에는 저장되지 않습니다.
     </div>
 
     <nav class="steps" aria-label="등록 진행 단계">
       <div class="step active" data-step="0"><b>1</b><small>QR 확인</small></div>
       <div class="step" data-step="1"><b>2</b><small>정보 입력</small></div>
       <div class="step" data-step="2"><b>3</b><small>사진·확인</small></div>
-      <div class="step" data-step="3"><b>4</b><small>테스트 완료</small></div>
+      <div class="step" data-step="3"><b>4</b><small>검증 완료</small></div>
     </nav>
 
     <section id="scan-screen" class="screen">
@@ -1196,30 +1197,31 @@
       <div class="safe-note">
         <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
         <div>
-          <strong>안전한 공개 테스트</strong>
-          <p>이 페이지는 사용자 흐름 확인용이며 서버 통신, 인증, 내부 시스템 연결을 수행하지 않습니다.</p>
+          <strong>검증 전용 연결</strong>
+          <p>입력 형식과 KHMDS 기준정보만 확인합니다. 사진 파일과 실제 KQMS 접수 데이터는 저장하지 않습니다.</p>
         </div>
       </div>
 
       <div class="sticky">
         <button id="edit" class="secondary" type="button">정보 수정</button>
-        <button id="submit-test" class="primary" type="button"><i class="bi bi-send-check" aria-hidden="true"></i> 테스트 접수</button>
+        <button id="submit-test" class="primary" type="button"><i class="bi bi-shield-check" aria-hidden="true"></i> 제출값 검증</button>
       </div>
     </section>
 
     <section id="success-screen" class="screen success" hidden>
       <div class="success-mark"><i class="bi bi-check-lg" aria-hidden="true"></i></div>
       <p class="eyebrow">PUBLIC TEST COMPLETE</p>
-      <h1>테스트가 완료됐습니다</h1>
-      <p class="success-copy">Form의 화면과 입력 흐름을 확인했습니다.<br>데이터는 어디에도 저장되지 않았습니다.</p>
+      <h1>제출값 검증이 완료됐습니다</h1>
+      <p class="success-copy">입력 형식과 KHMDS 기준정보를 확인했습니다.<br>실제 KQMS 접수 데이터는 생성되지 않았습니다.</p>
+      <p id="duplicate-validation-note" class="safe-note" role="status" hidden>동일한 제출값을 이미 검증하여 기존 검증 결과를 표시합니다.</p>
 
       <div class="receipt">
         <div class="receipt-title">
-          <span>테스트 요약</span>
-          <span class="not-saved">저장 안 됨</span>
+          <span>검증 결과 요약</span>
+          <span class="not-saved">KQMS 저장 안 됨</span>
         </div>
         <dl>
-          <div><dt>테스트 번호</dt><dd id="test-number">-</dd></div>
+          <div><dt>검증 ID</dt><dd id="validation-id">-</dd></div>
           <div><dt>QR 식별값</dt><dd id="receipt-qr">-</dd></div>
           <div><dt>신고 유형</dt><dd id="receipt-submission">-</dd></div>
           <div><dt>품번별 정보</dt><dd id="receipt-parts" class="part-summary-list">-</dd></div>
@@ -1289,7 +1291,9 @@
         scrapProgressIds: new Set(),
         scrapProgressStatus: "loading",
         partSearchResults: [],
-        selectedPartNos: new Set()
+        selectedPartNos: new Set(),
+        submissionAttempt: null,
+        submitting: false
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1299,6 +1303,7 @@
       const storageLocationCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/storage-locations";
       const scrapProgressCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/scrap-progress";
       const partSearchUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/parts/search";
+      const submissionValidationUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/validate";
       const now = new Date();
       const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       $("date").value = today;
@@ -1873,6 +1878,100 @@
         $("photo-empty").hidden = state.photos.length > 0;
       }
 
+      function buildValidationPayload() {
+        const submissionType = selectedChoice("submission-type") === "보물찾기" ? "treasure_hunt" : "self_report";
+        const disposition = selectedChoice("disposition") === "폐기" ? "scrap" : "repair";
+        return {
+          sourceQrCode: state.qr,
+          processNonconformance: {
+            reporter: {
+              name: $("author").value.trim(),
+              teamDepartmentId: state.teamDepartmentId,
+              teamDepartment: $("team-department").selectedOptions[0]?.textContent || ""
+            },
+            submissionType,
+            disposition,
+            parts: state.parts.map((part) => ({
+              partNo: part.partNo.trim(),
+              model: part.model.trim(),
+              customer: part.customer.trim(),
+              equipmentNo: part.equipmentNo.trim(),
+              qty: Number(part.quantity),
+              unit: "EA"
+            })),
+            processCode: state.processId,
+            processName: $("process").selectedOptions[0]?.textContent || "",
+            date: $("date").value,
+            description: $("memo").value.trim(),
+            quarantinePlace: "",
+            cost: 0
+          },
+          scrap: disposition === "scrap" ? {
+            storageLocationId: state.storageLocationId,
+            storageLocation: $("storage-location").selectedOptions[0]?.textContent || "",
+            processProgress: selectedScrapProgress(),
+            owner: "",
+            dueDate: null
+          } : null,
+          photoCount: state.photos.length
+        };
+      }
+
+      async function submitValidation() {
+        if (state.submitting) return;
+        const body = JSON.stringify(buildValidationPayload());
+        if (!state.submissionAttempt || state.submissionAttempt.body !== body) {
+          state.submissionAttempt = {
+            body,
+            idempotencyKey: `QRFORM-${crypto.randomUUID()}`
+          };
+        }
+
+        const button = $("submit-test");
+        state.submitting = true;
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        button.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 제출값 검증 중';
+        try {
+          const response = await fetch(submissionValidationUrl, {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              "content-type": "application/json",
+              "idempotency-key": state.submissionAttempt.idempotencyKey
+            },
+            body
+          });
+          let result;
+          try {
+            result = await response.json();
+          } catch {
+            throw new Error("검증 서버 응답을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.");
+          }
+          if (!response.ok || result.ok !== true || result.status !== "validated_only" || !result.validationId) {
+            throw new Error(result.message || "제출값을 검증하지 못했습니다. 잠시 후 다시 시도해주세요.");
+          }
+          $("validation-id").textContent = result.validationId;
+          $("receipt-qr").textContent = state.qr;
+          $("receipt-submission").textContent = selectedChoice("submission-type");
+          renderPartSummary("receipt-parts");
+          $("receipt-disposition").textContent = selectedChoice("disposition");
+          $("receipt-photos").textContent = `${state.photos.length}장`;
+          $("duplicate-validation-note").hidden = result.duplicate !== true;
+          setStep(3);
+        } catch (error) {
+          const message = error instanceof Error && error.name !== "TypeError"
+            ? error.message
+            : "검증 서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해주세요.";
+          showToast(message);
+        } finally {
+          state.submitting = false;
+          button.disabled = false;
+          button.removeAttribute("aria-busy");
+          button.innerHTML = '<i class="bi bi-shield-check" aria-hidden="true"></i> 제출값 검증';
+        }
+      }
+
       function reset() {
         state.photos.forEach((photo) => URL.revokeObjectURL(photo.url));
         state.photos = [];
@@ -1884,6 +1983,8 @@
         state.scrapProgressIds = new Set();
         state.partSearchResults = [];
         state.selectedPartNos = new Set();
+        state.submissionAttempt = null;
+        state.submitting = false;
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-search-results").hidden = true;
@@ -1998,15 +2099,7 @@
 
       $("edit").addEventListener("click", () => setStep(1));
 
-      $("submit-test").addEventListener("click", () => {
-        $("test-number").textContent = `TEST-NC-${String(Date.now()).slice(-8)}`;
-        $("receipt-qr").textContent = state.qr;
-        $("receipt-submission").textContent = selectedChoice("submission-type");
-        renderPartSummary("receipt-parts");
-        $("receipt-disposition").textContent = selectedChoice("disposition");
-        $("receipt-photos").textContent = `${state.photos.length}장`;
-        setStep(3);
-      });
+      $("submit-test").addEventListener("click", submitValidation);
 
       $("restart").addEventListener("click", reset);
 
@@ -2026,4 +2119,3 @@
   </script>
 </body>
 </html>
-
