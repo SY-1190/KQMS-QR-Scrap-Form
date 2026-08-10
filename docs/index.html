@@ -248,34 +248,12 @@
       outline-offset: 2px;
     }
 
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin: 22px 0;
-      color: #8b94a5;
-      font-size: 12px;
-      font-weight: 800;
-    }
-    .divider::before, .divider::after { height: 1px; flex: 1; background: var(--line); content: ""; }
-
-    .card, .manual, .photo-panel, .summary, .receipt {
+    .card, .photo-panel, .summary, .receipt {
       border: 1px solid var(--line);
       border-radius: 14px;
       background: var(--surface);
       box-shadow: 0 5px 18px rgba(32, 52, 92, .045);
     }
-    .manual { display: grid; gap: 12px; padding: 18px; }
-    .manual > label { font-size: 13px; font-weight: 900; }
-    .manual input {
-      width: 100%;
-      min-height: 52px;
-      padding: 0 14px;
-      border: 1px solid #bec8da;
-      border-radius: 9px;
-      background: #fbfcff;
-    }
-    .manual .secondary { width: 100%; }
     .qr-test {
       margin-top: 16px;
       border: 1px solid #bdd0f3;
@@ -877,12 +855,6 @@
         <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
         테스트 QR 스캔
       </button>
-      <div class="divider"><span>또는</span></div>
-      <form id="manual-form" class="manual">
-        <label for="manual-qr">QR 식별값 직접 입력</label>
-        <input id="manual-qr" autocomplete="off" placeholder="QR-KQMS-TEST-UNIVERSAL">
-        <button class="secondary" type="submit">등록 Form 열기</button>
-      </form>
       <details class="qr-test">
         <summary><i class="bi bi-phone" aria-hidden="true"></i> 실제 공정 QR 스캔 테스트</summary>
         <div class="qr-test-body">
@@ -977,6 +949,36 @@
           <small id="scrap-note" hidden>폐기를 선택한 신고는 폐기 등록/진행 대상으로 분류됩니다.</small>
         </fieldset>
 
+        <div id="discard-fields" class="discard-panel" hidden>
+          <div class="section-title">
+            <span>폐기 처리 정보</span>
+            <small><span class="required">*</span> 조건부 필수</small>
+          </div>
+          <div class="grid">
+            <label class="field">
+              <span>폐기품 적치 장소 <span class="required">*</span></span>
+              <select id="storage-location">
+                <option value="">적치 장소를 선택해주세요</option>
+                <option>테스트 적치 위치 A</option>
+                <option>테스트 적치 위치 B</option>
+                <option>테스트 적치 위치 C</option>
+              </select>
+              <small>운영 연동 시 KHMDS 폐기품 적치위치 목록을 제공합니다.</small>
+            </label>
+            <fieldset class="multi-choice-field">
+              <legend>폐기 제품 공정 진행 사항 <span class="required">*</span></legend>
+              <div class="check-grid" role="group">
+                <label><input type="checkbox" name="scrap-progress" value="절단/사상"><i class="bi bi-square" aria-hidden="true"></i><span>절단/사상</span></label>
+                <label><input type="checkbox" name="scrap-progress" value="가공"><i class="bi bi-square" aria-hidden="true"></i><span>가공</span></label>
+                <label><input type="checkbox" name="scrap-progress" value="제작(가접)"><i class="bi bi-square" aria-hidden="true"></i><span>제작(가접)</span></label>
+                <label><input type="checkbox" name="scrap-progress" value="용접"><i class="bi bi-square" aria-hidden="true"></i><span>용접</span></label>
+                <label><input type="checkbox" name="scrap-progress" value="도장"><i class="bi bi-square" aria-hidden="true"></i><span>도장</span></label>
+              </div>
+              <small>복수 선택 가능 · 운영 연동 시 KHMDS 공정진행사항 목록을 제공합니다.</small>
+            </fieldset>
+          </div>
+        </div>
+
         <div class="section-title">
           <span>기본 정보</span>
           <small><span class="required">*</span> 필수 입력</small>
@@ -1025,35 +1027,6 @@
           </label>
         </div>
 
-        <div id="discard-fields" class="discard-panel" hidden>
-          <div class="section-title">
-            <span>폐기 처리 정보</span>
-            <small><span class="required">*</span> 조건부 필수</small>
-          </div>
-          <div class="grid">
-            <label class="field">
-              <span>폐기품 적치 장소 <span class="required">*</span></span>
-              <select id="storage-location">
-                <option value="">적치 장소를 선택해주세요</option>
-                <option>테스트 적치 위치 A</option>
-                <option>테스트 적치 위치 B</option>
-                <option>테스트 적치 위치 C</option>
-              </select>
-              <small>운영 연동 시 KHMDS 폐기품 적치위치 목록을 제공합니다.</small>
-            </label>
-            <fieldset class="multi-choice-field">
-              <legend>폐기 제품 공정 진행 사항 <span class="required">*</span></legend>
-              <div class="check-grid" role="group">
-                <label><input type="checkbox" name="scrap-progress" value="절단/사상"><i class="bi bi-square" aria-hidden="true"></i><span>절단/사상</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="가공"><i class="bi bi-square" aria-hidden="true"></i><span>가공</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="제작(가접)"><i class="bi bi-square" aria-hidden="true"></i><span>제작(가접)</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="용접"><i class="bi bi-square" aria-hidden="true"></i><span>용접</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="도장"><i class="bi bi-square" aria-hidden="true"></i><span>도장</span></label>
-              </div>
-              <small>복수 선택 가능 · 운영 연동 시 KHMDS 공정진행사항 목록을 제공합니다.</small>
-            </fieldset>
-          </div>
-        </div>
         <div class="sticky">
           <button class="primary" type="submit">사진 첨부 및 확인 <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
         </div>
@@ -1411,7 +1384,6 @@
         state.photos = [];
         state.qr = "";
         state.parts = [];
-        $("manual-qr").value = "";
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-results").hidden = true;
@@ -1436,16 +1408,6 @@
         }
       });
       $("manual-part").addEventListener("click", () => addPart());
-
-      $("manual-form").addEventListener("submit", (event) => {
-        event.preventDefault();
-        const qr = $("manual-qr").value.trim();
-        if (!qr) {
-          showToast("QR 식별값을 입력해주세요.");
-          return;
-        }
-        openForm(qr, false);
-      });
 
       $("report-form").addEventListener("submit", (event) => {
         event.preventDefault();
