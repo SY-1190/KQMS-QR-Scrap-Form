@@ -1097,14 +1097,12 @@
             </div>
             <fieldset class="multi-choice-field">
               <legend>폐기 제품 공정 진행 사항 <span class="required">*</span></legend>
-              <div class="check-grid" role="group">
-                <label><input type="checkbox" name="scrap-progress" value="절단/사상"><i class="bi bi-square" aria-hidden="true"></i><span>절단/사상</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="가공"><i class="bi bi-square" aria-hidden="true"></i><span>가공</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="제작(가접)"><i class="bi bi-square" aria-hidden="true"></i><span>제작(가접)</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="용접"><i class="bi bi-square" aria-hidden="true"></i><span>용접</span></label>
-                <label><input type="checkbox" name="scrap-progress" value="도장"><i class="bi bi-square" aria-hidden="true"></i><span>도장</span></label>
+              <div id="scrap-progress-options" class="check-grid" role="group" aria-label="폐기제품 공정진행사항"></div>
+              <div class="catalog-feedback">
+                <small id="scrap-progress-status" class="catalog-status" role="status"><i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 공정 진행 사항을 불러오고 있습니다.</small>
+                <button id="scrap-progress-retry" class="catalog-retry" type="button" hidden><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> 다시 시도</button>
               </div>
-              <small>복수 선택 가능 · 운영 연동 시 KHMDS 공정진행사항 목록을 제공합니다.</small>
+              <small>복수 선택 가능 · KHMDS 실제 공정진행사항 목록입니다.</small>
             </fieldset>
           </div>
         </div>
@@ -1287,6 +1285,9 @@
         storageLocations: [],
         storageLocationId: "",
         storageLocationStatus: "loading",
+        scrapProgressItems: [],
+        scrapProgressIds: new Set(),
+        scrapProgressStatus: "loading",
         partSearchResults: [],
         selectedPartNos: new Set()
       };
@@ -1296,6 +1297,7 @@
       const processCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/processes";
       const teamDepartmentCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/team-departments";
       const storageLocationCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/storage-locations";
+      const scrapProgressCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/scrap-progress";
       const partSearchUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/parts/search";
       const now = new Date();
       const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -1503,6 +1505,70 @@
         }
       }
 
+      function renderScrapProgressOptions() {
+        const options = $("scrap-progress-options");
+        options.replaceChildren();
+        state.scrapProgressItems.forEach((item) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          const icon = document.createElement("i");
+          const text = document.createElement("span");
+          input.type = "checkbox";
+          input.name = "scrap-progress";
+          input.value = item.id;
+          input.checked = state.scrapProgressIds.has(item.id);
+          icon.className = `bi ${input.checked ? "bi-check-square-fill" : "bi-square"}`;
+          icon.setAttribute("aria-hidden", "true");
+          text.textContent = item.name;
+          label.classList.toggle("is-selected", input.checked);
+          input.addEventListener("change", () => {
+            if (input.checked) state.scrapProgressIds.add(item.id);
+            else state.scrapProgressIds.delete(item.id);
+            label.classList.toggle("is-selected", input.checked);
+            icon.className = `bi ${input.checked ? "bi-check-square-fill" : "bi-square"}`;
+          });
+          label.append(input, icon, text);
+          options.append(label);
+        });
+      }
+
+      async function loadScrapProgress() {
+        const status = $("scrap-progress-status");
+        state.scrapProgressStatus = "loading";
+        state.scrapProgressItems = [];
+        status.hidden = false;
+        status.className = "catalog-status";
+        status.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 공정 진행 사항을 불러오고 있습니다.';
+        $("scrap-progress-retry").hidden = true;
+        renderScrapProgressOptions();
+
+        try {
+          const response = await fetch(scrapProgressCatalogUrl, { headers: { accept: "application/json" } });
+          const body = await response.json();
+          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
+            throw new Error("폐기제품 공정진행사항 목록 응답이 올바르지 않습니다.");
+          }
+          const items = body.items.map((item) => ({ id: String(item.id).trim(), name: String(item.name).trim() }));
+          if (items.length > 100 || items.some((item) => !item.id || !item.name)) {
+            throw new Error("폐기제품 공정진행사항 목록 항목이 올바르지 않습니다.");
+          }
+          const availableIds = new Set(items.map((item) => item.id));
+          state.scrapProgressIds = new Set([...state.scrapProgressIds].filter((id) => availableIds.has(id)));
+          state.scrapProgressItems = items;
+          state.scrapProgressStatus = "ready";
+          status.hidden = true;
+          renderScrapProgressOptions();
+        } catch {
+          state.scrapProgressStatus = "error";
+          state.scrapProgressIds = new Set();
+          status.hidden = false;
+          status.className = "catalog-status is-error";
+          status.innerHTML = '<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> 공정 진행 사항을 불러오지 못했습니다.';
+          $("scrap-progress-retry").hidden = false;
+          renderScrapProgressOptions();
+        }
+      }
+
       function setStep(next) {
         state.step = next;
         screens.forEach((name, index) => {
@@ -1536,14 +1602,7 @@
       }
 
       function selectedScrapProgress() {
-        return [...document.querySelectorAll('input[name="scrap-progress"]:checked')].map((input) => input.value);
-      }
-
-      function syncProgressIcons() {
-        document.querySelectorAll('input[name="scrap-progress"]').forEach((input) => {
-          const icon = input.parentElement.querySelector("i");
-          icon.className = `bi ${input.checked ? "bi-check-square-fill" : "bi-square"}`;
-        });
+        return [...state.scrapProgressIds];
       }
 
       function createPart(partNo = "", model = "", customer = "", equipmentNo = "", quantity = "1") {
@@ -1757,11 +1816,8 @@
             $("storage-location").value = state.storageLocationId;
             renderStorageLocationPreview();
           }
-          const progress = new Set(["절단/사상", "용접"]);
-          document.querySelectorAll('input[name="scrap-progress"]').forEach((input) => {
-            input.checked = progress.has(input.value);
-          });
-          syncProgressIcons();
+          state.scrapProgressIds = new Set(["절단/사상", "용접"]);
+          renderScrapProgressOptions();
           $("memo").value = "공개 화면 검토를 위한 예시 입력입니다.";
         }
         renderPartLines();
@@ -1784,7 +1840,9 @@
         $("summary-memo").textContent = $("memo").value;
         $("summary-date").textContent = $("date").value;
         $("summary-storage").textContent = $("storage-location").selectedOptions[0]?.textContent || "-";
-        $("summary-progress").textContent = selectedScrapProgress().join(", ");
+        $("summary-progress").textContent = selectedScrapProgress()
+          .map((id) => state.scrapProgressItems.find((item) => item.id === id)?.name || id)
+          .join(", ");
         $("summary-storage-row").hidden = !isDisposal;
         $("summary-progress-row").hidden = !isDisposal;
         $("summary-photos").textContent = `${state.photos.length}장`;
@@ -1823,6 +1881,7 @@
         state.processId = "";
         state.teamDepartmentId = "";
         state.storageLocationId = "";
+        state.scrapProgressIds = new Set();
         state.partSearchResults = [];
         state.selectedPartNos = new Set();
         $("part-query").value = "";
@@ -1832,7 +1891,7 @@
         closePartSearch();
         $("report-form").reset();
         $("date").value = today;
-        syncProgressIcons();
+        renderScrapProgressOptions();
         syncDisposition();
         renderPartLines();
         renderPhotos();
@@ -1870,6 +1929,7 @@
         renderStorageLocationPreview();
       });
       $("storage-location-retry").addEventListener("click", loadStorageLocations);
+      $("scrap-progress-retry").addEventListener("click", loadScrapProgress);
 
       $("report-form").addEventListener("submit", (event) => {
         event.preventDefault();
@@ -1897,6 +1957,10 @@
           showToast("폐기품 적치 장소를 선택해주세요.");
           return;
         }
+        if (selectedChoice("disposition") === "폐기" && state.scrapProgressStatus !== "ready") {
+          showToast("폐기제품 공정진행사항 목록을 불러온 후 다시 진행해주세요.");
+          return;
+        }
         if (!state.parts.length || state.parts.some((part) => !part.partNo.trim())) {
           showToast("품번을 검색해 선택하거나 수기로 입력해주세요.");
           return;
@@ -1915,10 +1979,6 @@
 
       document.querySelectorAll('input[name="disposition"]').forEach((input) => {
         input.addEventListener("change", syncDisposition);
-      });
-
-      document.querySelectorAll('input[name="scrap-progress"]').forEach((input) => {
-        input.addEventListener("change", syncProgressIcons);
       });
 
       $("photos").addEventListener("change", (event) => {
@@ -1959,6 +2019,7 @@
       void loadProcesses();
       void loadTeamDepartments();
       void loadStorageLocations();
+      void loadScrapProgress();
       const qrFromUrl = new URLSearchParams(location.search).get("qr");
       if (qrFromUrl && qrFromUrl.trim()) openForm(qrFromUrl.trim(), false);
     })();
