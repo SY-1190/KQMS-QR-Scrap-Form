@@ -425,7 +425,7 @@
     .choice-option:focus-within { outline: 3px solid rgba(11, 78, 199, .18); outline-offset: 2px; }
     .field { display: grid; gap: 7px; }
     .field.full { grid-column: 1 / -1; }
-    .field > span { font-size: 13px; font-weight: 900; }
+    .field > span, .field > label { font-size: 13px; font-weight: 900; }
     .auto-chip {
       display: inline-flex;
       margin-left: 5px;
@@ -580,6 +580,26 @@
       outline: 0;
     }
     .field > small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .field select:disabled { color: #68758b; background: #f1f4f9; cursor: wait; }
+    .catalog-status { display: flex; align-items: center; gap: 5px; }
+    .catalog-status.is-ready { color: #177245; font-weight: 800; }
+    .catalog-status.is-error { color: #b42318; font-weight: 800; }
+    .catalog-spinner { animation: catalog-spin 900ms linear infinite; }
+    .catalog-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .catalog-retry {
+      display: inline-flex;
+      min-height: 34px;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 10px;
+      border: 1px solid #b9c9e6;
+      border-radius: 8px;
+      color: var(--blue);
+      background: #fff;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    @keyframes catalog-spin { to { transform: rotate(360deg); } }
     .multi-choice-field {
       display: grid;
       grid-column: 1 / -1;
@@ -1009,18 +1029,16 @@
         </section>
 
         <div class="grid">
-          <label class="field">
-            <span>발생 공정 <span class="required">*</span></span>
-            <select id="process" required>
-              <option value="">발생 공정을 선택해주세요</option>
-              <option>절단</option>
-              <option>가공</option>
-              <option>조립</option>
-              <option>용접</option>
-              <option>도장</option>
+          <div class="field">
+            <label for="process">발생 공정 <span class="required">*</span></label>
+            <select id="process" required disabled>
+              <option value="">공정 목록을 불러오는 중입니다</option>
             </select>
-            <small>운영 연동 시 KHMDS 공정 목록을 제공합니다.</small>
-          </label>
+            <div class="catalog-error">
+              <small id="process-status" class="catalog-status" role="status"><i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 공정 목록을 불러오고 있습니다.</small>
+              <button id="process-retry" class="catalog-retry" type="button" hidden><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> 다시 시도</button>
+            </div>
+          </div>
           <label class="field full">
             <span>발생 현상/내용 <span class="required">*</span></span>
             <textarea id="memo" required placeholder="발생 위치, 부적합 현상과 즉시 조치 내용을 입력해주세요."></textarea>
@@ -1124,11 +1142,15 @@
         step: 0,
         qr: "",
         parts: [],
-        photos: []
+        photos: [],
+        processes: [],
+        processId: "",
+        processStatus: "loading"
       };
 
       const $ = (id) => document.getElementById(id);
       const testUniversalQrCode = "QR-KQMS-TEST-UNIVERSAL";
+      const processCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/processes";
       const testPartCatalog = Object.freeze([
         { partNo: "PUMP-CX200", model: "CX-200", customer: "테스트 고객사 A" },
         { partNo: "VALVE-A100", model: "A-100", customer: "테스트 고객사 B" },
@@ -1144,6 +1166,55 @@
         toast.hidden = false;
         window.clearTimeout(showToast.timer);
         showToast.timer = window.setTimeout(() => { toast.hidden = true; }, 2600);
+      }
+
+      async function loadProcesses() {
+        const select = $("process");
+        const status = $("process-status");
+        state.processStatus = "loading";
+        state.processes = [];
+        select.disabled = true;
+        select.replaceChildren(new Option("공정 목록을 불러오는 중입니다", ""));
+        status.className = "catalog-status";
+        status.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 공정 목록을 불러오고 있습니다.';
+        $("process-retry").hidden = true;
+
+        try {
+          const response = await fetch(processCatalogUrl, { headers: { accept: "application/json" } });
+          const body = await response.json();
+          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
+            throw new Error("공정 목록 응답이 올바르지 않습니다.");
+          }
+          const items = body.items.map((item) => ({ id: String(item.id).trim(), name: String(item.name).trim() }));
+          if (items.some((item) => !item.id || !item.name)) {
+            throw new Error("공정 목록 항목이 올바르지 않습니다.");
+          }
+
+          state.processes = items;
+          state.processStatus = "ready";
+          select.replaceChildren(new Option("발생 공정을 선택해주세요", ""));
+          items.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.name;
+            select.append(option);
+          });
+          select.disabled = false;
+          if (state.processId && items.some((item) => item.id === state.processId)) {
+            select.value = state.processId;
+          } else {
+            state.processId = "";
+          }
+          status.className = "catalog-status is-ready";
+          status.innerHTML = `<i class="bi bi-check-circle-fill" aria-hidden="true"></i> 실제 공정 ${items.length}개를 불러왔습니다.`;
+        } catch {
+          state.processStatus = "error";
+          state.processId = "";
+          select.replaceChildren(new Option("공정 목록을 불러오지 못했습니다", ""));
+          status.className = "catalog-status is-error";
+          status.innerHTML = '<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> 공정 목록을 불러오지 못했습니다.';
+          $("process-retry").hidden = false;
+        }
       }
 
       function setStep(next) {
@@ -1307,6 +1378,7 @@
 
       function openForm(qr, withSample) {
         state.qr = qr;
+        state.processId = withSample ? "조립" : "";
         state.parts = withSample
           ? [
               createPart("PUMP-CX200", "CX-200", "테스트 고객사 A", "1호기", "2"),
@@ -1319,7 +1391,7 @@
           $("team-department").value = "부서 · 품질팀";
           selectChoice("submission-type", "자진신고");
           selectChoice("disposition", "폐기");
-          $("process").value = "조립";
+          if (state.processStatus === "ready") $("process").value = state.processId;
           $("storage-location").value = "테스트 적치 위치 A";
           const progress = new Set(["절단/사상", "용접"]);
           document.querySelectorAll('input[name="scrap-progress"]').forEach((input) => {
@@ -1344,7 +1416,7 @@
         $("summary-author").textContent = $("author").value;
         $("summary-team-department").textContent = $("team-department").value;
         renderPartSummary("summary-parts");
-        $("summary-process").textContent = $("process").value;
+        $("summary-process").textContent = $("process").selectedOptions[0]?.textContent || "-";
         $("summary-memo").textContent = $("memo").value;
         $("summary-date").textContent = $("date").value;
         $("summary-storage").textContent = $("storage-location").value;
@@ -1384,6 +1456,7 @@
         state.photos = [];
         state.qr = "";
         state.parts = [];
+        state.processId = "";
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-results").hidden = true;
@@ -1408,9 +1481,19 @@
         }
       });
       $("manual-part").addEventListener("click", () => addPart());
+      $("process").addEventListener("change", (event) => { state.processId = event.target.value; });
+      $("process-retry").addEventListener("click", loadProcesses);
 
       $("report-form").addEventListener("submit", (event) => {
         event.preventDefault();
+        if (state.processStatus !== "ready") {
+          showToast("발생 공정 목록을 불러온 후 다시 진행해주세요.");
+          return;
+        }
+        if (!$("process").value) {
+          showToast("발생 공정을 선택해주세요.");
+          return;
+        }
         if (!state.parts.length || state.parts.some((part) => !part.partNo.trim())) {
           showToast("품번을 검색해 선택하거나 수기로 입력해주세요.");
           return;
@@ -1470,9 +1553,11 @@
         else if (state.step === 3) reset();
       });
 
+      void loadProcesses();
       const qrFromUrl = new URLSearchParams(location.search).get("qr");
       if (qrFromUrl && qrFromUrl.trim()) openForm(qrFromUrl.trim(), false);
     })();
   </script>
 </body>
 </html>
+
