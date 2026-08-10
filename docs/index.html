@@ -600,6 +600,44 @@
       font-weight: 900;
     }
     @keyframes catalog-spin { to { transform: rotate(360deg); } }
+    .storage-location-preview {
+      display: grid;
+      overflow: hidden;
+      margin: 5px 0 0;
+      border: 1px solid #c8d5ea;
+      border-radius: 12px;
+      background: #f7f9fd;
+      animation: enter 240ms ease both;
+    }
+    .storage-location-preview img, .storage-location-image-empty { width: 100%; aspect-ratio: 16 / 9; }
+    .storage-location-preview img { display: block; object-fit: contain; background: #e9eef7; }
+    .storage-location-image-empty {
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .storage-location-image-empty i { font-size: 28px; }
+    .storage-location-preview figcaption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 13px;
+      border-top: 1px solid #d7dfed;
+      background: #fff;
+      font-size: 11px;
+    }
+    .storage-location-preview figcaption span {
+      flex: 0 0 auto;
+      padding: 4px 7px;
+      border-radius: 999px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-weight: 900;
+    }
     .multi-choice-field {
       display: grid;
       grid-column: 1 / -1;
@@ -975,16 +1013,27 @@
             <small><span class="required">*</span> 조건부 필수</small>
           </div>
           <div class="grid">
-            <label class="field">
-              <span>폐기품 적치 장소 <span class="required">*</span></span>
-              <select id="storage-location">
-                <option value="">적치 장소를 선택해주세요</option>
-                <option>테스트 적치 위치 A</option>
-                <option>테스트 적치 위치 B</option>
-                <option>테스트 적치 위치 C</option>
+            <div class="field full">
+              <label for="storage-location">폐기품 적치 장소 <span class="required">*</span></label>
+              <select id="storage-location" disabled>
+                <option value="">적치 위치 목록을 불러오는 중입니다</option>
               </select>
-              <small>운영 연동 시 KHMDS 폐기품 적치위치 목록을 제공합니다.</small>
-            </label>
+              <div class="catalog-feedback">
+                <small id="storage-location-status" class="catalog-status" role="status"><i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 적치 위치와 사진을 불러오고 있습니다.</small>
+                <button id="storage-location-retry" class="catalog-retry" type="button" hidden><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> 다시 시도</button>
+              </div>
+              <figure id="storage-location-preview" class="storage-location-preview" hidden>
+                <img id="storage-location-image" alt="" hidden>
+                <div id="storage-location-image-empty" class="storage-location-image-empty" hidden>
+                  <i class="bi bi-image" aria-hidden="true"></i>
+                  <span>등록된 위치 사진이 없습니다.</span>
+                </div>
+                <figcaption>
+                  <strong id="storage-location-name"></strong>
+                  <span id="storage-location-id"></span>
+                </figcaption>
+              </figure>
+            </div>
             <fieldset class="multi-choice-field">
               <legend>폐기 제품 공정 진행 사항 <span class="required">*</span></legend>
               <div class="check-grid" role="group">
@@ -1148,13 +1197,17 @@
         processStatus: "loading",
         teamDepartments: [],
         teamDepartmentId: "",
-        teamDepartmentStatus: "loading"
+        teamDepartmentStatus: "loading",
+        storageLocations: [],
+        storageLocationId: "",
+        storageLocationStatus: "loading"
       };
 
       const $ = (id) => document.getElementById(id);
       const testUniversalQrCode = "QR-KQMS-TEST-UNIVERSAL";
       const processCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/processes";
       const teamDepartmentCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/team-departments";
+      const storageLocationCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/storage-locations";
       const testPartCatalog = Object.freeze([
         { partNo: "PUMP-CX200", model: "CX-200", customer: "테스트 고객사 A" },
         { partNo: "VALVE-A100", model: "A-100", customer: "테스트 고객사 B" },
@@ -1272,6 +1325,94 @@
           status.className = "catalog-status is-error";
           status.innerHTML = '<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> 작성 팀/부서 목록을 불러오지 못했습니다.';
           $("team-department-retry").hidden = false;
+        }
+      }
+
+      function renderStorageLocationPreview() {
+        const selected = state.storageLocations.find((item) => item.id === state.storageLocationId);
+        const preview = $("storage-location-preview");
+        const image = $("storage-location-image");
+        const empty = $("storage-location-image-empty");
+        if (!selected) {
+          preview.hidden = true;
+          image.removeAttribute("src");
+          return;
+        }
+
+        preview.hidden = false;
+        $("storage-location-name").textContent = selected.name;
+        $("storage-location-id").textContent = selected.id;
+        image.onerror = () => {
+          image.hidden = true;
+          empty.hidden = false;
+          empty.querySelector("span").textContent = "위치 사진을 불러오지 못했습니다.";
+        };
+        if (selected.hasImage && selected.imageUrl) {
+          image.alt = `${selected.id} ${selected.name} 적치 위치 사진`;
+          image.src = selected.imageUrl;
+          image.hidden = false;
+          empty.hidden = true;
+        } else {
+          image.removeAttribute("src");
+          image.hidden = true;
+          empty.hidden = false;
+          empty.querySelector("span").textContent = "등록된 위치 사진이 없습니다.";
+        }
+      }
+
+      async function loadStorageLocations() {
+        const select = $("storage-location");
+        const status = $("storage-location-status");
+        state.storageLocationStatus = "loading";
+        state.storageLocations = [];
+        select.disabled = true;
+        select.replaceChildren(new Option("적치 위치 목록을 불러오는 중입니다", ""));
+        status.className = "catalog-status";
+        status.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 적치 위치와 사진을 불러오고 있습니다.';
+        $("storage-location-retry").hidden = true;
+
+        try {
+          const response = await fetch(storageLocationCatalogUrl, { headers: { accept: "application/json" } });
+          const body = await response.json();
+          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
+            throw new Error("폐기품 적치위치 목록 응답이 올바르지 않습니다.");
+          }
+          const items = body.items.map((item) => ({
+            id: String(item.id).trim(),
+            name: String(item.name).trim(),
+            hasImage: item.hasImage === true,
+            imageUrl: item.imageUrl ? String(item.imageUrl).trim() : null
+          }));
+          if (items.some((item) => !item.id || !item.name || (item.hasImage && !item.imageUrl))) {
+            throw new Error("폐기품 적치위치 목록 항목이 올바르지 않습니다.");
+          }
+
+          state.storageLocations = items;
+          state.storageLocationStatus = "ready";
+          select.replaceChildren(new Option("적치 장소를 선택해주세요", ""));
+          items.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = `${item.id} · ${item.name}`;
+            select.append(option);
+          });
+          select.disabled = false;
+          if (state.storageLocationId && items.some((item) => item.id === state.storageLocationId)) {
+            select.value = state.storageLocationId;
+          } else {
+            state.storageLocationId = "";
+          }
+          status.className = "catalog-status is-ready";
+          status.innerHTML = `<i class="bi bi-check-circle-fill" aria-hidden="true"></i> 실제 적치 위치 ${items.length}개를 불러왔습니다.`;
+          renderStorageLocationPreview();
+        } catch {
+          state.storageLocationStatus = "error";
+          state.storageLocationId = "";
+          select.replaceChildren(new Option("적치 위치 목록을 불러오지 못했습니다", ""));
+          status.className = "catalog-status is-error";
+          status.innerHTML = '<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> 적치 위치 목록을 불러오지 못했습니다.';
+          $("storage-location-retry").hidden = false;
+          renderStorageLocationPreview();
         }
       }
 
@@ -1438,6 +1579,7 @@
         state.qr = qr;
         state.processId = withSample ? "조립" : "";
         state.teamDepartmentId = withSample ? "department:품질팀" : "";
+        state.storageLocationId = withSample ? "F-24" : "";
         state.parts = withSample
           ? [
               createPart("PUMP-CX200", "CX-200", "테스트 고객사 A", "1호기", "2"),
@@ -1451,7 +1593,10 @@
           selectChoice("submission-type", "자진신고");
           selectChoice("disposition", "폐기");
           if (state.processStatus === "ready") $("process").value = state.processId;
-          $("storage-location").value = "테스트 적치 위치 A";
+          if (state.storageLocationStatus === "ready") {
+            $("storage-location").value = state.storageLocationId;
+            renderStorageLocationPreview();
+          }
           const progress = new Set(["절단/사상", "용접"]);
           document.querySelectorAll('input[name="scrap-progress"]').forEach((input) => {
             input.checked = progress.has(input.value);
@@ -1478,7 +1623,7 @@
         $("summary-process").textContent = $("process").selectedOptions[0]?.textContent || "-";
         $("summary-memo").textContent = $("memo").value;
         $("summary-date").textContent = $("date").value;
-        $("summary-storage").textContent = $("storage-location").value;
+        $("summary-storage").textContent = $("storage-location").selectedOptions[0]?.textContent || "-";
         $("summary-progress").textContent = selectedScrapProgress().join(", ");
         $("summary-storage-row").hidden = !isDisposal;
         $("summary-progress-row").hidden = !isDisposal;
@@ -1517,6 +1662,7 @@
         state.parts = [];
         state.processId = "";
         state.teamDepartmentId = "";
+        state.storageLocationId = "";
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-results").hidden = true;
@@ -1527,6 +1673,7 @@
         syncDisposition();
         renderPartLines();
         renderPhotos();
+        renderStorageLocationPreview();
         history.replaceState({}, "", location.pathname);
         setStep(0);
       }
@@ -1545,6 +1692,11 @@
       $("process-retry").addEventListener("click", loadProcesses);
       $("team-department").addEventListener("change", (event) => { state.teamDepartmentId = event.target.value; });
       $("team-department-retry").addEventListener("click", loadTeamDepartments);
+      $("storage-location").addEventListener("change", (event) => {
+        state.storageLocationId = event.target.value;
+        renderStorageLocationPreview();
+      });
+      $("storage-location-retry").addEventListener("click", loadStorageLocations);
 
       $("report-form").addEventListener("submit", (event) => {
         event.preventDefault();
@@ -1562,6 +1714,14 @@
         }
         if (!$("process").value) {
           showToast("발생 공정을 선택해주세요.");
+          return;
+        }
+        if (selectedChoice("disposition") === "폐기" && state.storageLocationStatus !== "ready") {
+          showToast("폐기품 적치위치 목록을 불러온 후 다시 진행해주세요.");
+          return;
+        }
+        if (selectedChoice("disposition") === "폐기" && !state.storageLocationId) {
+          showToast("폐기품 적치 장소를 선택해주세요.");
           return;
         }
         if (!state.parts.length || state.parts.some((part) => !part.partNo.trim())) {
@@ -1625,6 +1785,7 @@
 
       void loadProcesses();
       void loadTeamDepartments();
+      void loadStorageLocations();
       const qrFromUrl = new URLSearchParams(location.search).get("qr");
       if (qrFromUrl && qrFromUrl.trim()) openForm(qrFromUrl.trim(), false);
     })();
