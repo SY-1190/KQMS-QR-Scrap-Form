@@ -918,16 +918,16 @@
             <span>작성자 <span class="required">*</span></span>
             <input id="author" required placeholder="작성자 이름 수기입력">
           </label>
-          <label class="field">
-            <span>작성 팀/부서 <span class="required">*</span></span>
-            <select id="team-department" required>
-              <option value="">선택해주세요</option>
-              <option>부서 · 품질팀</option>
-              <option>부서 · 제작팀</option>
-              <option>협력업체 · 테스트 협력업체</option>
+          <div class="field">
+            <label for="team-department">작성 팀/부서 <span class="required">*</span></label>
+            <select id="team-department" required disabled>
+              <option value="">작성 팀/부서 목록을 불러오는 중입니다</option>
             </select>
-            <small>운영 연동 시 KHMDS 협력업체와 부서 목록을 합쳐 제공합니다.</small>
-          </label>
+            <div class="catalog-feedback">
+              <small id="team-department-status" class="catalog-status" role="status"><i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 작성 팀/부서 목록을 불러오고 있습니다.</small>
+              <button id="team-department-retry" class="catalog-retry" type="button" hidden><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> 다시 시도</button>
+            </div>
+          </div>
         </div>
 
         <div class="section-title">
@@ -1145,12 +1145,16 @@
         photos: [],
         processes: [],
         processId: "",
-        processStatus: "loading"
+        processStatus: "loading",
+        teamDepartments: [],
+        teamDepartmentId: "",
+        teamDepartmentStatus: "loading"
       };
 
       const $ = (id) => document.getElementById(id);
       const testUniversalQrCode = "QR-KQMS-TEST-UNIVERSAL";
       const processCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/processes";
+      const teamDepartmentCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/team-departments";
       const testPartCatalog = Object.freeze([
         { partNo: "PUMP-CX200", model: "CX-200", customer: "테스트 고객사 A" },
         { partNo: "VALVE-A100", model: "A-100", customer: "테스트 고객사 B" },
@@ -1214,6 +1218,60 @@
           status.className = "catalog-status is-error";
           status.innerHTML = '<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> 공정 목록을 불러오지 못했습니다.';
           $("process-retry").hidden = false;
+        }
+      }
+
+      async function loadTeamDepartments() {
+        const select = $("team-department");
+        const status = $("team-department-status");
+        state.teamDepartmentStatus = "loading";
+        state.teamDepartments = [];
+        select.disabled = true;
+        select.replaceChildren(new Option("작성 팀/부서 목록을 불러오는 중입니다", ""));
+        status.className = "catalog-status";
+        status.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 실제 작성 팀/부서 목록을 불러오고 있습니다.';
+        $("team-department-retry").hidden = true;
+
+        try {
+          const response = await fetch(teamDepartmentCatalogUrl, { headers: { accept: "application/json" } });
+          const body = await response.json();
+          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
+            throw new Error("작성 팀/부서 목록 응답이 올바르지 않습니다.");
+          }
+          const items = body.items.map((item) => ({
+            id: String(item.id).trim(),
+            name: String(item.name).trim(),
+            source: String(item.source).trim(),
+            label: String(item.label).trim()
+          }));
+          if (items.some((item) => !item.id || !item.name || !item.label || !["부서", "협력업체"].includes(item.source))) {
+            throw new Error("작성 팀/부서 목록 항목이 올바르지 않습니다.");
+          }
+
+          state.teamDepartments = items;
+          state.teamDepartmentStatus = "ready";
+          select.replaceChildren(new Option("작성 팀/부서를 선택해주세요", ""));
+          items.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.label;
+            select.append(option);
+          });
+          select.disabled = false;
+          if (state.teamDepartmentId && items.some((item) => item.id === state.teamDepartmentId)) {
+            select.value = state.teamDepartmentId;
+          } else {
+            state.teamDepartmentId = "";
+          }
+          status.className = "catalog-status is-ready";
+          status.innerHTML = `<i class="bi bi-check-circle-fill" aria-hidden="true"></i> 실제 작성 팀/부서 ${items.length}개를 불러왔습니다.`;
+        } catch {
+          state.teamDepartmentStatus = "error";
+          state.teamDepartmentId = "";
+          select.replaceChildren(new Option("작성 팀/부서 목록을 불러오지 못했습니다", ""));
+          status.className = "catalog-status is-error";
+          status.innerHTML = '<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> 작성 팀/부서 목록을 불러오지 못했습니다.';
+          $("team-department-retry").hidden = false;
         }
       }
 
@@ -1379,6 +1437,7 @@
       function openForm(qr, withSample) {
         state.qr = qr;
         state.processId = withSample ? "조립" : "";
+        state.teamDepartmentId = withSample ? "department:품질팀" : "";
         state.parts = withSample
           ? [
               createPart("PUMP-CX200", "CX-200", "테스트 고객사 A", "1호기", "2"),
@@ -1388,7 +1447,7 @@
         $("qr-result").textContent = qr;
         if (withSample) {
           $("author").value = "홍길동";
-          $("team-department").value = "부서 · 품질팀";
+          if (state.teamDepartmentStatus === "ready") $("team-department").value = state.teamDepartmentId;
           selectChoice("submission-type", "자진신고");
           selectChoice("disposition", "폐기");
           if (state.processStatus === "ready") $("process").value = state.processId;
@@ -1414,7 +1473,7 @@
         $("summary-disposition").textContent = disposition;
         $("summary-decision").textContent = `${disposition} 접수 테스트`;
         $("summary-author").textContent = $("author").value;
-        $("summary-team-department").textContent = $("team-department").value;
+        $("summary-team-department").textContent = $("team-department").selectedOptions[0]?.textContent || "-";
         renderPartSummary("summary-parts");
         $("summary-process").textContent = $("process").selectedOptions[0]?.textContent || "-";
         $("summary-memo").textContent = $("memo").value;
@@ -1457,6 +1516,7 @@
         state.qr = "";
         state.parts = [];
         state.processId = "";
+        state.teamDepartmentId = "";
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-results").hidden = true;
@@ -1483,9 +1543,19 @@
       $("manual-part").addEventListener("click", () => addPart());
       $("process").addEventListener("change", (event) => { state.processId = event.target.value; });
       $("process-retry").addEventListener("click", loadProcesses);
+      $("team-department").addEventListener("change", (event) => { state.teamDepartmentId = event.target.value; });
+      $("team-department-retry").addEventListener("click", loadTeamDepartments);
 
       $("report-form").addEventListener("submit", (event) => {
         event.preventDefault();
+        if (state.teamDepartmentStatus !== "ready") {
+          showToast("작성 팀/부서 목록을 불러온 후 다시 진행해주세요.");
+          return;
+        }
+        if (!state.teamDepartmentId) {
+          showToast("작성 팀/부서를 선택해주세요.");
+          return;
+        }
         if (state.processStatus !== "ready") {
           showToast("발생 공정 목록을 불러온 후 다시 진행해주세요.");
           return;
@@ -1554,6 +1624,7 @@
       });
 
       void loadProcesses();
+      void loadTeamDepartments();
       const qrFromUrl = new URLSearchParams(location.search).get("qr");
       if (qrFromUrl && qrFromUrl.trim()) openForm(qrFromUrl.trim(), false);
     })();
