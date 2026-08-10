@@ -505,22 +505,9 @@
       border-radius: 9px;
     }
     .part-search-row .secondary { min-width: 74px; }
-    .part-results, .part-lines { display: grid; gap: 9px; }
-    .part-results button {
-      display: flex;
-      min-height: 54px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 13px;
-      border: 1px solid #bdd0f3;
-      border-radius: 10px;
-      color: var(--blue);
-      background: var(--blue-soft);
-      text-align: left;
-    }
-    .part-results button span { display: grid; gap: 3px; }
-    .part-results button small { color: #52627d; font-size: 10px; }
+    .part-lines { display: grid; gap: 9px; }
+    .part-entry-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .part-entry-actions button { min-height: 46px; }
     .manual-part {
       min-height: 46px;
       border: 1px dashed #9bb4dc;
@@ -571,6 +558,79 @@
       text-align: center;
     }
     .part-search-message { margin: -3px 0 0; color: #7a4b00; font-weight: 800; }
+    .part-search-backdrop {
+      position: fixed;
+      z-index: 100;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(16, 27, 48, .58);
+      backdrop-filter: blur(4px);
+      animation: enter 180ms ease both;
+    }
+    .part-search-dialog {
+      display: grid;
+      width: min(620px, 100%);
+      max-height: min(760px, calc(100dvh - 36px));
+      overflow: hidden;
+      border: 1px solid #c9d5e8;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(17, 31, 56, .28);
+      animation: pop 220ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+    .part-search-dialog > header, .part-search-dialog > footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+    }
+    .part-search-dialog > header { border-bottom: 1px solid var(--line); }
+    .part-search-dialog > header div { display: grid; gap: 3px; }
+    .part-search-dialog > header small, .part-search-guide, .part-search-loading { margin: 0; color: var(--muted); font-size: 10px; }
+    .part-search-dialog > header h2 { margin: 0; font-size: 18px; }
+    .part-search-dialog > header button {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      color: #45536a;
+      background: #f0f3f8;
+    }
+    .part-search-dialog-body { display: grid; gap: 11px; min-height: 230px; overflow-y: auto; padding: 17px 18px; }
+    .part-search-loading { display: flex; align-items: center; gap: 7px; padding: 18px 0; color: var(--blue); font-weight: 800; }
+    .part-search-results { display: grid; gap: 8px; margin: 3px 0 0; padding: 0; border: 0; }
+    .part-search-results legend { margin-bottom: 7px; color: #44526a; font-size: 11px; font-weight: 900; }
+    .part-search-results > div { display: grid; gap: 8px; }
+    .part-search-results label {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 11px;
+      min-height: 62px;
+      padding: 11px 12px;
+      border: 1px solid #d4ddec;
+      border-radius: 11px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+    }
+    .part-search-results label:hover { border-color: #9db7e4; transform: translateY(-1px); }
+    .part-search-results label.is-selected { border-color: var(--blue); background: var(--blue-soft); }
+    .part-search-results label:has(input:disabled) { cursor: not-allowed; opacity: .58; }
+    .part-search-results input { width: 18px; height: 18px; accent-color: var(--blue); }
+    .part-search-results span { display: grid; gap: 4px; min-width: 0; }
+    .part-search-results strong, .part-search-results small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .part-search-results strong { color: #172238; font-size: 12px; }
+    .part-search-results small { color: var(--muted); font-size: 10px; }
+    .part-search-results em { color: var(--blue); font-size: 10px; font-style: normal; font-weight: 900; }
+    .part-search-dialog > footer { justify-content: flex-end; border-top: 1px solid var(--line); background: #f8faff; }
+    .part-search-dialog > footer button { min-width: 116px; }
     .part-summary-list { display: grid; gap: 5px; }
     .part-summary-list span { display: block; }
     .field textarea { min-height: 110px; resize: vertical; }
@@ -860,6 +920,7 @@
       .brand-icon { width: 28px; height: 28px; font-size: 13px; }
       .grid { grid-template-columns: 1fr; }
       .part-line-grid { grid-template-columns: 1fr; }
+      .part-entry-actions { grid-template-columns: 1fr; }
       .check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .field.full { grid-column: auto; }
       .photos { grid-template-columns: repeat(2, 1fr); }
@@ -1061,18 +1122,14 @@
             </div>
             <span id="part-count" class="part-count">0개 품번</span>
           </div>
-          <div class="part-search-row">
-            <label>
-              <i class="bi bi-search" aria-hidden="true"></i>
-              <input id="part-query" autocomplete="off" placeholder="품번 또는 모델 검색">
-            </label>
-            <button id="part-search" class="secondary" type="button">검색</button>
+          <div class="part-entry-actions">
+            <button id="open-part-search" class="secondary" type="button">
+              <i class="bi bi-search" aria-hidden="true"></i> 품번 검색
+            </button>
+            <button id="manual-part" class="manual-part" type="button">
+              <i class="bi bi-pencil-square" aria-hidden="true"></i> 검색 없이 품번 수기작성
+            </button>
           </div>
-          <div id="part-results" class="part-results" aria-label="품번 검색 결과" hidden></div>
-          <p id="part-search-message" class="part-search-message" role="status" hidden></p>
-          <button id="manual-part" class="manual-part" type="button">
-            <i class="bi bi-pencil-square" aria-hidden="true"></i> 검색 없이 품번 수기작성
-          </button>
           <div id="part-lines" class="part-lines"></div>
           <p id="part-empty" class="part-empty"><i class="bi bi-box-seam" aria-hidden="true"></i> 추가된 품번이 없습니다.</p>
         </section>
@@ -1179,6 +1236,35 @@
       </button>
     </section>
 
+    <div id="part-search-backdrop" class="part-search-backdrop" hidden>
+      <section class="part-search-dialog" role="dialog" aria-modal="true" aria-labelledby="part-search-title">
+        <header>
+          <div><small>KHMDS 품번 검색</small><h2 id="part-search-title">품번 다중 선택</h2></div>
+          <button id="close-part-search" type="button" aria-label="품번 검색 닫기"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </header>
+        <div class="part-search-dialog-body">
+          <div class="part-search-row">
+            <label>
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input id="part-query" autocomplete="off" placeholder="품번 또는 모델 앞 2자 이상">
+            </label>
+            <button id="part-search" class="secondary" type="button">검색</button>
+          </div>
+          <p class="part-search-guide">앞부분이 일치하는 결과를 최대 50건 표시합니다.</p>
+          <p id="part-search-loading" class="part-search-loading" role="status" hidden><i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 품번을 검색하고 있습니다.</p>
+          <p id="part-search-message" class="part-search-message" role="status" hidden></p>
+          <fieldset id="part-search-results" class="part-search-results" hidden>
+            <legend id="part-search-result-count">검색 결과 0건</legend>
+            <div id="part-results"></div>
+          </fieldset>
+        </div>
+        <footer>
+          <button id="cancel-part-search" class="secondary" type="button">취소</button>
+          <button id="add-selected-parts" class="primary" type="button">선택한 0개 추가</button>
+        </footer>
+      </section>
+    </div>
+
     <div id="toast" class="toast" role="alert" hidden></div>
   </main>
 
@@ -1200,7 +1286,9 @@
         teamDepartmentStatus: "loading",
         storageLocations: [],
         storageLocationId: "",
-        storageLocationStatus: "loading"
+        storageLocationStatus: "loading",
+        partSearchResults: [],
+        selectedPartNos: new Set()
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1208,11 +1296,7 @@
       const processCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/processes";
       const teamDepartmentCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/team-departments";
       const storageLocationCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/storage-locations";
-      const testPartCatalog = Object.freeze([
-        { partNo: "PUMP-CX200", model: "CX-200", customer: "테스트 고객사 A" },
-        { partNo: "VALVE-A100", model: "A-100", customer: "테스트 고객사 B" },
-        { partNo: "SHAFT-S300", model: "S-300", customer: "테스트 고객사 A" }
-      ]);
+      const partSearchUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/parts/search";
       const now = new Date();
       const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       $("date").value = today;
@@ -1230,6 +1314,7 @@
         const status = $("process-status");
         state.processStatus = "loading";
         state.processes = [];
+        status.hidden = false;
         select.disabled = true;
         select.replaceChildren(new Option("공정 목록을 불러오는 중입니다", ""));
         status.className = "catalog-status";
@@ -1262,10 +1347,10 @@
           } else {
             state.processId = "";
           }
-          status.className = "catalog-status is-ready";
-          status.innerHTML = `<i class="bi bi-check-circle-fill" aria-hidden="true"></i> 실제 공정 ${items.length}개를 불러왔습니다.`;
+          status.hidden = true;
         } catch {
           state.processStatus = "error";
+          status.hidden = false;
           state.processId = "";
           select.replaceChildren(new Option("공정 목록을 불러오지 못했습니다", ""));
           status.className = "catalog-status is-error";
@@ -1279,6 +1364,7 @@
         const status = $("team-department-status");
         state.teamDepartmentStatus = "loading";
         state.teamDepartments = [];
+        status.hidden = false;
         select.disabled = true;
         select.replaceChildren(new Option("작성 팀/부서 목록을 불러오는 중입니다", ""));
         status.className = "catalog-status";
@@ -1316,10 +1402,10 @@
           } else {
             state.teamDepartmentId = "";
           }
-          status.className = "catalog-status is-ready";
-          status.innerHTML = `<i class="bi bi-check-circle-fill" aria-hidden="true"></i> 실제 작성 팀/부서 ${items.length}개를 불러왔습니다.`;
+          status.hidden = true;
         } catch {
           state.teamDepartmentStatus = "error";
+          status.hidden = false;
           state.teamDepartmentId = "";
           select.replaceChildren(new Option("작성 팀/부서 목록을 불러오지 못했습니다", ""));
           status.className = "catalog-status is-error";
@@ -1365,6 +1451,7 @@
         const status = $("storage-location-status");
         state.storageLocationStatus = "loading";
         state.storageLocations = [];
+        status.hidden = false;
         select.disabled = true;
         select.replaceChildren(new Option("적치 위치 목록을 불러오는 중입니다", ""));
         status.className = "catalog-status";
@@ -1402,11 +1489,11 @@
           } else {
             state.storageLocationId = "";
           }
-          status.className = "catalog-status is-ready";
-          status.innerHTML = `<i class="bi bi-check-circle-fill" aria-hidden="true"></i> 실제 적치 위치 ${items.length}개를 불러왔습니다.`;
+          status.hidden = true;
           renderStorageLocationPreview();
         } catch {
           state.storageLocationStatus = "error";
+          status.hidden = false;
           state.storageLocationId = "";
           select.replaceChildren(new Option("적치 위치 목록을 불러오지 못했습니다", ""));
           status.className = "catalog-status is-error";
@@ -1540,39 +1627,117 @@
         renderPartLines();
       }
 
-      function searchParts() {
-        const query = $("part-query").value.trim().toLowerCase();
+      function openPartSearch() {
+        state.partSearchResults = [];
+        state.selectedPartNos = new Set();
+        $("part-query").value = "";
+        $("part-results").replaceChildren();
+        $("part-search-results").hidden = true;
+        $("part-search-message").hidden = true;
+        $("part-search-loading").hidden = true;
+        $("add-selected-parts").textContent = "선택한 0개 추가";
+        $("part-search-backdrop").hidden = false;
+        document.body.style.overflow = "hidden";
+        window.setTimeout(() => $("part-query").focus(), 0);
+      }
+
+      function closePartSearch() {
+        $("part-search-backdrop").hidden = true;
+        $("part-search").disabled = false;
+        $("part-search").textContent = "검색";
+        document.body.style.overflow = "";
+      }
+
+      function renderPartSearchResults() {
         const results = $("part-results");
-        const message = $("part-search-message");
+        const fieldset = $("part-search-results");
         results.replaceChildren();
+        state.partSearchResults.forEach((part) => {
+          const alreadyAdded = state.parts.some((item) => item.partNo.toUpperCase() === part.partNo.toUpperCase());
+          const label = document.createElement("label");
+          const checkbox = document.createElement("input");
+          const content = document.createElement("span");
+          const code = document.createElement("strong");
+          const details = document.createElement("small");
+          const stateText = document.createElement("em");
+          checkbox.type = "checkbox";
+          checkbox.checked = state.selectedPartNos.has(part.partNo);
+          checkbox.disabled = alreadyAdded;
+          code.textContent = part.partNo;
+          details.textContent = `모델 ${part.model || "-"} · 고객사 ${part.customer || "-"}`;
+          stateText.textContent = alreadyAdded ? "추가됨" : "선택";
+          content.append(code, details);
+          label.classList.toggle("is-selected", checkbox.checked);
+          checkbox.addEventListener("change", () => {
+            if (checkbox.checked) state.selectedPartNos.add(part.partNo);
+            else state.selectedPartNos.delete(part.partNo);
+            label.classList.toggle("is-selected", checkbox.checked);
+            $("add-selected-parts").textContent = `선택한 ${state.selectedPartNos.size}개 추가`;
+          });
+          label.append(checkbox, content, stateText);
+          results.append(label);
+        });
+        $("part-search-result-count").textContent = `검색 결과 ${state.partSearchResults.length}건`;
+        fieldset.hidden = state.partSearchResults.length === 0;
+      }
+
+      async function searchParts() {
+        const query = $("part-query").value.trim();
+        const message = $("part-search-message");
         if (query.length < 2) {
-          results.hidden = true;
+          state.partSearchResults = [];
+          state.selectedPartNos = new Set();
+          renderPartSearchResults();
           message.textContent = "품번 또는 모델을 2자 이상 입력해주세요.";
           message.hidden = false;
           return;
         }
-        const matches = testPartCatalog.filter((part) =>
-          part.partNo.toLowerCase().includes(query) || part.model.toLowerCase().includes(query)
-        );
-        matches.forEach((part) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          const label = document.createElement("span");
-          const code = document.createElement("strong");
-          const details = document.createElement("small");
-          const icon = document.createElement("i");
-          code.textContent = part.partNo;
-          details.textContent = `모델 ${part.model} · 고객사 ${part.customer}`;
-          icon.className = "bi bi-plus-circle";
-          icon.setAttribute("aria-hidden", "true");
-          label.append(code, details);
-          button.append(label, icon);
-          button.addEventListener("click", () => addPart(part));
-          results.append(button);
-        });
-        results.hidden = matches.length === 0;
-        message.textContent = matches.length ? "" : "검색 결과가 없습니다. 품번을 수기로 작성해주세요.";
-        message.hidden = matches.length > 0;
+        $("part-search").disabled = true;
+        $("part-search").textContent = "검색 중";
+        $("part-search-loading").hidden = false;
+        message.hidden = true;
+        state.selectedPartNos = new Set();
+        try {
+          const url = new URL(partSearchUrl);
+          url.searchParams.set("q", query);
+          const response = await fetch(url, { headers: { accept: "application/json" } });
+          const body = await response.json();
+          if (!response.ok || body.ok !== true || !Array.isArray(body.items)) throw new Error("invalid response");
+          const matches = body.items.map((part) => ({
+            partNo: String(part.partNo || "").trim(),
+            model: String(part.model || "").trim(),
+            customer: String(part.customer || "").trim()
+          }));
+          if (matches.length > 50 || matches.some((part) => !part.partNo)) throw new Error("invalid items");
+          state.partSearchResults = matches;
+          renderPartSearchResults();
+          message.textContent = matches.length ? "" : "검색 결과가 없습니다. 품번을 수기로 작성해주세요.";
+          message.hidden = matches.length > 0;
+        } catch {
+          state.partSearchResults = [];
+          renderPartSearchResults();
+          message.textContent = "품번 검색을 이용할 수 없습니다. 잠시 후 다시 시도하거나 수기로 작성해주세요.";
+          message.hidden = false;
+        } finally {
+          $("part-search").disabled = false;
+          $("part-search").textContent = "검색";
+          $("part-search-loading").hidden = true;
+        }
+      }
+
+      function addSelectedParts() {
+        const selected = state.partSearchResults.filter((part) => state.selectedPartNos.has(part.partNo));
+        const existing = new Set(state.parts.map((part) => part.partNo.toUpperCase()));
+        const additions = selected.filter((part) => !existing.has(part.partNo.toUpperCase()));
+        if (!additions.length) {
+          const message = $("part-search-message");
+          message.textContent = selected.length ? "선택한 품번은 이미 추가되어 있습니다." : "추가할 품번을 선택해주세요.";
+          message.hidden = false;
+          return;
+        }
+        additions.forEach((part) => state.parts.push(createPart(part.partNo, part.model, part.customer)));
+        renderPartLines();
+        closePartSearch();
       }
 
       function openForm(qr, withSample) {
@@ -1580,12 +1745,7 @@
         state.processId = withSample ? "조립" : "";
         state.teamDepartmentId = withSample ? "department:품질팀" : "";
         state.storageLocationId = withSample ? "F-24" : "";
-        state.parts = withSample
-          ? [
-              createPart("PUMP-CX200", "CX-200", "테스트 고객사 A", "1호기", "2"),
-              createPart("VALVE-A100", "A-100", "테스트 고객사 B", "", "3")
-            ]
-          : [];
+        state.parts = [];
         $("qr-result").textContent = qr;
         if (withSample) {
           $("author").value = "홍길동";
@@ -1663,10 +1823,13 @@
         state.processId = "";
         state.teamDepartmentId = "";
         state.storageLocationId = "";
+        state.partSearchResults = [];
+        state.selectedPartNos = new Set();
         $("part-query").value = "";
         $("part-results").replaceChildren();
-        $("part-results").hidden = true;
+        $("part-search-results").hidden = true;
         $("part-search-message").hidden = true;
+        closePartSearch();
         $("report-form").reset();
         $("date").value = today;
         syncProgressIcons();
@@ -1680,12 +1843,22 @@
 
       $("sample-scan").addEventListener("click", () => openForm(testUniversalQrCode, true));
 
+      $("open-part-search").addEventListener("click", openPartSearch);
       $("part-search").addEventListener("click", searchParts);
       $("part-query").addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
           searchParts();
         }
+      });
+      $("close-part-search").addEventListener("click", closePartSearch);
+      $("cancel-part-search").addEventListener("click", closePartSearch);
+      $("add-selected-parts").addEventListener("click", addSelectedParts);
+      $("part-search-backdrop").addEventListener("mousedown", (event) => {
+        if (event.target === event.currentTarget) closePartSearch();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !$("part-search-backdrop").hidden) closePartSearch();
       });
       $("manual-part").addEventListener("click", () => addPart());
       $("process").addEventListener("change", (event) => { state.processId = event.target.value; });
