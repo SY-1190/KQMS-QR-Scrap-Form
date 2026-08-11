@@ -872,6 +872,9 @@
       font-size: 50px;
       animation: pop 520ms cubic-bezier(.34, 1.56, .64, 1) both;
     }
+    .success.delivery-queued .success-mark, .success.delivery-processing .success-mark { color: var(--blue); background: var(--blue-soft); }
+    .success.delivery-retrying .success-mark { color: var(--amber); background: var(--amber-soft); }
+    .success.delivery-failed .success-mark { color: var(--red); background: #fff0ef; }
     .success-copy { margin-bottom: 22px; }
     .receipt { text-align: left; }
     .receipt-title {
@@ -883,13 +886,18 @@
       font-size: 14px;
       font-weight: 900;
     }
-    .not-saved {
+    .delivery-status {
       padding: 6px 9px;
       border-radius: 999px;
-      color: var(--amber);
-      background: var(--amber-soft);
       font-size: 9px;
     }
+    .delivery-status.status-queued, .delivery-status.status-processing { color: var(--blue); background: var(--blue-soft); }
+    .delivery-status.status-retrying { color: var(--amber); background: var(--amber-soft); }
+    .delivery-status.status-completed { color: var(--green); background: var(--green-soft); }
+    .delivery-status.status-failed { color: var(--red); background: #fff0ef; }
+    .status-note { margin: 0 0 16px; padding: 10px 12px; border-radius: 8px; color: #3f5878; background: #eef5ff; font-size: 11px; font-weight: 800; }
+    .report-number-list { display: grid; gap: 4px; }
+    .receipt-secondary-action { width: 100%; margin-top: 10px; }
 
     .toast {
       position: fixed;
@@ -952,14 +960,14 @@
 
     <div class="notice" role="note">
       <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-      공개 테스트 · 서버에서 제출값만 검증하며 현재 KQMS에는 저장되지 않습니다.
+      공개 접수 Form · 제출 후 KQMS 접수 완료 또는 실패 상태를 화면에서 확인할 수 있습니다.
     </div>
 
     <nav class="steps" aria-label="등록 진행 단계">
       <div class="step active" data-step="0"><b>1</b><small>QR 확인</small></div>
       <div class="step" data-step="1"><b>2</b><small>정보 입력</small></div>
       <div class="step" data-step="2"><b>3</b><small>사진·확인</small></div>
-      <div class="step" data-step="3"><b>4</b><small>검증 완료</small></div>
+      <div class="step" data-step="3"><b>4</b><small>접수 상태</small></div>
     </nav>
 
     <section id="scan-screen" class="screen">
@@ -1197,42 +1205,46 @@
       <div class="safe-note">
         <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
         <div>
-          <strong>검증 전용 연결</strong>
-          <p>입력 형식과 KHMDS 기준정보만 확인합니다. 사진 파일과 실제 KQMS 접수 데이터는 저장하지 않습니다.</p>
+          <strong>암호화된 KQMS 접수</strong>
+          <p>제출 본문은 암호화된 대기열을 거쳐 KQMS에 전달됩니다. 사진 파일은 이번 접수에서 전송하지 않습니다.</p>
         </div>
       </div>
 
       <div class="sticky">
         <button id="edit" class="secondary" type="button">정보 수정</button>
-        <button id="submit-test" class="primary" type="button"><i class="bi bi-shield-check" aria-hidden="true"></i> 제출값 검증</button>
+        <button id="submit-test" class="primary" type="button"><i class="bi bi-shield-check" aria-hidden="true"></i> KQMS 접수</button>
       </div>
     </section>
 
-    <section id="success-screen" class="screen success" hidden>
-      <div class="success-mark"><i class="bi bi-check-lg" aria-hidden="true"></i></div>
-      <p class="eyebrow">PUBLIC TEST COMPLETE</p>
-      <h1>제출값 검증이 완료됐습니다</h1>
-      <p class="success-copy">입력 형식과 KHMDS 기준정보를 확인했습니다.<br>실제 KQMS 접수 데이터는 생성되지 않았습니다.</p>
-      <p id="duplicate-validation-note" class="safe-note" role="status" hidden>동일한 제출값을 이미 검증하여 기존 검증 결과를 표시합니다.</p>
+    <section id="success-screen" class="screen success delivery-queued" hidden>
+      <div class="success-mark"><i id="delivery-icon" class="bi bi-hourglass-split" aria-hidden="true"></i></div>
+      <p id="delivery-eyebrow" class="eyebrow">WAITING FOR KQMS</p>
+      <h1 id="delivery-title">KQMS 전송을 기다리고 있습니다</h1>
+      <p id="delivery-message" class="success-copy" role="status" aria-live="polite">KQMS 전송을 기다리고 있습니다.</p>
+      <p id="duplicate-validation-note" class="status-note" role="status" hidden>동일한 제출 요청의 기존 처리 상태를 표시합니다.</p>
 
       <div class="receipt">
         <div class="receipt-title">
-          <span>검증 결과 요약</span>
-          <span class="not-saved">KQMS 저장 안 됨</span>
+          <span>접수 처리 결과</span>
+          <span id="delivery-badge" class="delivery-status status-queued">전송 대기</span>
         </div>
         <dl>
-          <div><dt>검증 ID</dt><dd id="validation-id">-</dd></div>
-          <div><dt>QR 식별값</dt><dd id="receipt-qr">-</dd></div>
-          <div><dt>신고 유형</dt><dd id="receipt-submission">-</dd></div>
-          <div><dt>품번별 정보</dt><dd id="receipt-parts" class="part-summary-list">-</dd></div>
-          <div><dt>처리 구분</dt><dd id="receipt-disposition">-</dd></div>
-          <div><dt>사진</dt><dd id="receipt-photos">0장</dd></div>
+          <div><dt>접수 확인 ID</dt><dd id="validation-id">-</dd></div>
+          <div><dt>전송 시도</dt><dd id="delivery-attempts">0회</dd></div>
+          <div id="next-attempt-row" hidden><dt>다음 자동 시도</dt><dd id="next-attempt-at">-</dd></div>
+          <div id="completed-at-row" hidden><dt>KQMS 완료 시각</dt><dd id="completed-at">-</dd></div>
+          <div id="report-numbers-row" hidden><dt>KQMS 접수번호</dt><dd id="report-numbers" class="report-number-list">-</dd></div>
+          <div id="receipt-qr-row" hidden><dt>QR 식별값</dt><dd id="receipt-qr">-</dd></div>
         </dl>
       </div>
 
-      <button id="restart" class="primary" type="button">
+      <button id="retry-submission" class="primary" type="button" hidden>
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        다시 전송
+      </button>
+      <button id="restart" class="secondary receipt-secondary-action" type="button" hidden>
         <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
-        다른 QR 테스트
+        다른 QR 접수
       </button>
     </section>
 
@@ -1293,7 +1305,12 @@
         partSearchResults: [],
         selectedPartNos: new Set(),
         submissionAttempt: null,
-        submitting: false
+        submitting: false,
+        submissionId: "",
+        receiptToken: "",
+        deliveryStatus: "queued",
+        statusPollTimer: null,
+        retryingSubmission: false
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1304,6 +1321,16 @@
       const scrapProgressCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/scrap-progress";
       const partSearchUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/parts/search";
       const submissionValidationUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/validate";
+      const submissionStatusUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/status";
+      const submissionRetryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/retry";
+      const submissionReceiptStorageKey = "kqms-qr-submission-receipt";
+      const deliveryPresentation = {
+        queued: { icon: "bi-hourglass-split", eyebrow: "WAITING FOR KQMS", title: "KQMS 전송을 기다리고 있습니다", badge: "전송 대기" },
+        processing: { icon: "bi-arrow-repeat", eyebrow: "SENDING TO KQMS", title: "KQMS에 접수하고 있습니다", badge: "접수 중" },
+        retrying: { icon: "bi-arrow-clockwise", eyebrow: "AUTOMATIC RETRY", title: "일시 장애로 다시 시도하고 있습니다", badge: "자동 재시도" },
+        completed: { icon: "bi-check-lg", eyebrow: "KQMS RECEIVED", title: "KQMS 접수가 완료됐습니다", badge: "접수 완료" },
+        failed: { icon: "bi-exclamation-lg", eyebrow: "ACTION REQUIRED", title: "KQMS 접수에 실패했습니다", badge: "접수 실패" }
+      };
       const now = new Date();
       const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       $("date").value = today;
@@ -1314,6 +1341,101 @@
         toast.hidden = false;
         window.clearTimeout(showToast.timer);
         showToast.timer = window.setTimeout(() => { toast.hidden = true; }, 2600);
+      }
+
+      function formatKoreanDateTime(value) {
+        if (!value) return "-";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ko-KR", { hour12: false });
+      }
+
+      function stopStatusPolling() {
+        if (state.statusPollTimer !== null) window.clearInterval(state.statusPollTimer);
+        state.statusPollTimer = null;
+      }
+
+      function renderDeliveryStatus(result) {
+        if (!deliveryPresentation[result.status]) return;
+        state.deliveryStatus = result.status;
+        const presentation = deliveryPresentation[result.status];
+        const screen = $("success-screen");
+        screen.className = `screen success delivery-${result.status}`;
+        $("delivery-icon").className = `bi ${presentation.icon}${["processing", "retrying"].includes(result.status) ? " catalog-spinner" : ""}`;
+        $("delivery-eyebrow").textContent = presentation.eyebrow;
+        $("delivery-title").textContent = presentation.title;
+        $("delivery-message").textContent = result.message || "접수 상태를 확인하고 있습니다.";
+        $("delivery-badge").textContent = presentation.badge;
+        $("delivery-badge").className = `delivery-status status-${result.status}`;
+        $("delivery-attempts").textContent = `${Number.isInteger(result.attempts) ? result.attempts : 0}회`;
+        $("next-attempt-row").hidden = !result.nextAttemptAt;
+        $("next-attempt-at").textContent = formatKoreanDateTime(result.nextAttemptAt);
+        $("completed-at-row").hidden = !result.completedAt;
+        $("completed-at").textContent = formatKoreanDateTime(result.completedAt);
+        const reportNumbers = Array.isArray(result.reportNumbers) ? result.reportNumbers : [];
+        $("report-numbers-row").hidden = reportNumbers.length === 0;
+        $("report-numbers").replaceChildren(...reportNumbers.map((number) => {
+          const item = document.createElement("span");
+          item.textContent = number;
+          return item;
+        }));
+        $("retry-submission").hidden = result.status !== "failed";
+        $("restart").hidden = !["completed", "failed"].includes(result.status);
+        $("back").classList.toggle("is-invisible", !["completed", "failed"].includes(result.status));
+        if (["completed", "failed"].includes(result.status)) stopStatusPolling();
+      }
+
+      async function refreshSubmissionStatus() {
+        if (!state.submissionId || !state.receiptToken) return;
+        try {
+          const response = await fetch(submissionStatusUrl, {
+            method: "POST",
+            headers: { accept: "application/json", "content-type": "application/json" },
+            body: JSON.stringify({ validationId: state.submissionId, receiptToken: state.receiptToken })
+          });
+          const result = await response.json();
+          if (!response.ok || result.ok !== true || !deliveryPresentation[result.status]) {
+            throw new Error(result.message || "접수 상태를 확인하지 못했습니다.");
+          }
+          renderDeliveryStatus(result);
+        } catch {
+          $("delivery-message").textContent = "접수 상태 서버에 연결하지 못했습니다. 자동으로 다시 확인합니다.";
+        }
+      }
+
+      function startStatusPolling() {
+        stopStatusPolling();
+        void refreshSubmissionStatus();
+        if (["completed", "failed"].includes(state.deliveryStatus)) return;
+        state.statusPollTimer = window.setInterval(refreshSubmissionStatus, 2000);
+      }
+
+      async function retrySubmission() {
+        if (state.retryingSubmission || !state.submissionId || !state.receiptToken) return;
+        const button = $("retry-submission");
+        state.retryingSubmission = true;
+        button.disabled = true;
+        button.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 다시 전송 요청 중';
+        try {
+          const response = await fetch(submissionRetryUrl, {
+            method: "POST",
+            headers: { accept: "application/json", "content-type": "application/json" },
+            body: JSON.stringify({ validationId: state.submissionId, receiptToken: state.receiptToken })
+          });
+          const result = await response.json();
+          if (!response.ok || result.ok !== true || result.status !== "queued") {
+            throw new Error(result.message || "다시 전송을 요청하지 못했습니다.");
+          }
+          renderDeliveryStatus(result);
+          startStatusPolling();
+        } catch (error) {
+          $("delivery-message").textContent = error instanceof Error && error.name !== "TypeError"
+            ? error.message
+            : "접수 서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해주세요.";
+        } finally {
+          state.retryingSubmission = false;
+          button.disabled = false;
+          button.innerHTML = '<i class="bi bi-arrow-clockwise" aria-hidden="true"></i> 다시 전송';
+        }
       }
 
       async function loadProcesses() {
@@ -1931,7 +2053,7 @@
         state.submitting = true;
         button.disabled = true;
         button.setAttribute("aria-busy", "true");
-        button.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 제출값 검증 중';
+        button.innerHTML = '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> KQMS 접수 요청 중';
         try {
           const response = await fetch(submissionValidationUrl, {
             method: "POST",
@@ -1948,31 +2070,37 @@
           } catch {
             throw new Error("검증 서버 응답을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.");
           }
-          if (!response.ok || result.ok !== true || result.status !== "validated_only" || !result.validationId) {
-            throw new Error(result.message || "제출값을 검증하지 못했습니다. 잠시 후 다시 시도해주세요.");
+          if (!response.ok || result.ok !== true || !["queued", "completed"].includes(result.status) || !result.validationId || !result.receiptToken) {
+            throw new Error(result.message || "KQMS 접수를 시작하지 못했습니다. 잠시 후 다시 시도해주세요.");
           }
+          state.submissionId = result.validationId;
+          state.receiptToken = result.receiptToken;
           $("validation-id").textContent = result.validationId;
           $("receipt-qr").textContent = state.qr;
-          $("receipt-submission").textContent = selectedChoice("submission-type");
-          renderPartSummary("receipt-parts");
-          $("receipt-disposition").textContent = selectedChoice("disposition");
-          $("receipt-photos").textContent = `${state.photos.length}장`;
+          $("receipt-qr-row").hidden = !state.qr;
           $("duplicate-validation-note").hidden = result.duplicate !== true;
+          localStorage.setItem(submissionReceiptStorageKey, JSON.stringify({
+            validationId: result.validationId,
+            receiptToken: result.receiptToken
+          }));
           setStep(3);
+          renderDeliveryStatus({ status: result.status, attempts: 0, message: result.message, reportNumbers: [] });
+          startStatusPolling();
         } catch (error) {
           const message = error instanceof Error && error.name !== "TypeError"
             ? error.message
-            : "검증 서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해주세요.";
+            : "접수 서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해주세요.";
           showToast(message);
         } finally {
           state.submitting = false;
           button.disabled = false;
           button.removeAttribute("aria-busy");
-          button.innerHTML = '<i class="bi bi-shield-check" aria-hidden="true"></i> 제출값 검증';
+          button.innerHTML = '<i class="bi bi-shield-check" aria-hidden="true"></i> KQMS 접수';
         }
       }
 
       function reset() {
+        stopStatusPolling();
         state.photos.forEach((photo) => URL.revokeObjectURL(photo.url));
         state.photos = [];
         state.qr = "";
@@ -1985,6 +2113,10 @@
         state.selectedPartNos = new Set();
         state.submissionAttempt = null;
         state.submitting = false;
+        state.submissionId = "";
+        state.receiptToken = "";
+        state.deliveryStatus = "queued";
+        state.retryingSubmission = false;
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-search-results").hidden = true;
@@ -1997,6 +2129,7 @@
         renderPartLines();
         renderPhotos();
         renderStorageLocationPreview();
+        localStorage.removeItem(submissionReceiptStorageKey);
         history.replaceState({}, "", location.pathname);
         setStep(0);
       }
@@ -2101,12 +2234,14 @@
 
       $("submit-test").addEventListener("click", submitValidation);
 
+      $("retry-submission").addEventListener("click", retrySubmission);
+
       $("restart").addEventListener("click", reset);
 
       $("back").addEventListener("click", () => {
         if (state.step === 1) setStep(0);
         else if (state.step === 2) setStep(1);
-        else if (state.step === 3) reset();
+        else if (state.step === 3 && ["completed", "failed"].includes(state.deliveryStatus)) reset();
       });
 
       void loadProcesses();
@@ -2114,7 +2249,24 @@
       void loadStorageLocations();
       void loadScrapProgress();
       const qrFromUrl = new URLSearchParams(location.search).get("qr");
-      if (qrFromUrl && qrFromUrl.trim()) openForm(qrFromUrl.trim(), false);
+      if (qrFromUrl && qrFromUrl.trim()) {
+        openForm(qrFromUrl.trim(), false);
+      } else {
+        try {
+          const receipt = JSON.parse(localStorage.getItem(submissionReceiptStorageKey) || "null");
+          if (receipt?.validationId && receipt.receiptToken) {
+            state.submissionId = receipt.validationId;
+            state.receiptToken = receipt.receiptToken;
+            $("validation-id").textContent = receipt.validationId;
+            $("receipt-qr-row").hidden = true;
+            setStep(3);
+            renderDeliveryStatus({ status: "queued", attempts: 0, message: "저장된 접수 상태를 확인하고 있습니다.", reportNumbers: [] });
+            startStatusPolling();
+          }
+        } catch {
+          localStorage.removeItem(submissionReceiptStorageKey);
+        }
+      }
     })();
   </script>
 </body>
