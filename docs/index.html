@@ -255,62 +255,6 @@
       background: var(--surface);
       box-shadow: 0 5px 18px rgba(32, 52, 92, .045);
     }
-    .qr-test {
-      margin-top: 16px;
-      border: 1px solid #bdd0f3;
-      border-radius: 12px;
-      background: #fff;
-    }
-    .qr-test summary {
-      display: flex;
-      min-height: 50px;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 15px;
-      color: var(--blue);
-      font-size: 13px;
-      font-weight: 900;
-      cursor: pointer;
-      list-style: none;
-    }
-    .qr-test summary::-webkit-details-marker { display: none; }
-    .qr-test summary::after {
-      margin-left: auto;
-      font-family: bootstrap-icons;
-      content: "\f282";
-      transition: transform 180ms ease;
-    }
-    .qr-test[open] summary::after { transform: rotate(180deg); }
-    .qr-test-body {
-      display: grid;
-      justify-items: center;
-      gap: 10px;
-      padding: 0 16px 18px;
-      border-top: 1px solid #e7edf8;
-      text-align: center;
-    }
-    .qr-test-body img {
-      width: 220px;
-      max-width: 76%;
-      margin-top: 16px;
-      border: 10px solid #fff;
-      image-rendering: pixelated;
-    }
-    .qr-test-body strong { font-size: 13px; }
-    .qr-test-body p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
-    .qr-test-link {
-      display: inline-flex;
-      min-height: 44px;
-      align-items: center;
-      gap: 7px;
-      padding: 9px 13px;
-      border-radius: 9px;
-      color: var(--blue);
-      background: var(--blue-soft);
-      font-size: 12px;
-      font-weight: 900;
-      text-decoration: none;
-    }
     .footnote {
       display: flex;
       align-items: flex-start;
@@ -979,25 +923,14 @@
         <div class="scanner-frame"><i class="bi bi-qr-code"></i></div>
       </div>
       <div class="intro center">
-        <p class="eyebrow">PUBLIC FLOW TEST</p>
-        <h1>현장 QR 코드를<br>스캔해주세요</h1>
-        <p>어느 위치의 QR을 스캔해도 동일한 신고 Form이 열리며, 발생 공정은 직접 선택합니다.</p>
+        <p id="scan-eyebrow" class="eyebrow">KQMS PROCESS NONCONFORMANCE</p>
+        <h1 id="scan-title">현장 QR 코드를<br>스캔해주세요</h1>
+        <p id="scan-description">공정에 부착된 QR 코드를 휴대폰 기본 카메라로 스캔해 접속해주세요.</p>
       </div>
-      <button id="sample-scan" class="primary" type="button">
-        <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
-        테스트 QR 스캔
+      <button id="registration-start" class="primary" type="button" hidden>
+        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+        등록 시작
       </button>
-      <details class="qr-test">
-        <summary><i class="bi bi-phone" aria-hidden="true"></i> 실제 공정 QR 스캔 테스트</summary>
-        <div class="qr-test-body">
-          <img src="./process-test-qr.svg" alt="공통 공개 테스트 QR 코드">
-          <strong>공통 공개 테스트 QR</strong>
-          <p>PC나 태블릿에 이 QR을 표시한 뒤 스마트폰 기본 카메라로 스캔하세요.</p>
-          <a class="qr-test-link" href="?qr=QR-KQMS-TEST-UNIVERSAL">
-            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> 이 기기에서 Form 열기
-          </a>
-        </div>
-      </details>
       <p class="footnote">
         <i class="bi bi-shield-check" aria-hidden="true"></i>
         QR은 공정을 고정하지 않고 공개 Form 진입 정보만 포함합니다.
@@ -1327,7 +1260,6 @@
       };
 
       const $ = (id) => document.getElementById(id);
-      const testUniversalQrCode = "QR-KQMS-TEST-UNIVERSAL";
       const processCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/processes";
       const teamDepartmentCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/team-departments";
       const storageLocationCatalogUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/masters/storage-locations";
@@ -1939,29 +1871,17 @@
         closePartSearch();
       }
 
-      function openForm(qr, withSample) {
+      function confirmQr(qr) {
         state.qr = qr;
-        state.processId = withSample ? "조립" : "";
-        state.teamDepartmentId = withSample ? "department:품질팀" : "";
-        state.storageLocationId = withSample ? "F-24" : "";
-        state.parts = [];
         $("qr-result").textContent = qr;
-        if (withSample) {
-          $("author").value = "홍길동";
-          if (state.teamDepartmentStatus === "ready") $("team-department").value = state.teamDepartmentId;
-          selectChoice("submission-type", "자진신고");
-          selectChoice("disposition", "폐기");
-          if (state.processStatus === "ready") $("process").value = state.processId;
-          if (state.storageLocationStatus === "ready") {
-            $("storage-location").value = state.storageLocationId;
-            renderStorageLocationPreview();
-          }
-          state.scrapProgressIds = new Set(["절단/사상", "용접"]);
-          renderScrapProgressOptions();
-          $("memo").value = "공개 화면 검토를 위한 예시 입력입니다.";
-        }
-        renderPartLines();
-        syncDisposition();
+        $("scan-eyebrow").textContent = "QR VERIFIED";
+        $("scan-title").textContent = "공정부적합 신고";
+        $("scan-description").textContent = "QR 확인이 완료되었습니다. 아래 버튼을 눌러 신고 정보 작성을 시작해주세요.";
+        $("registration-start").hidden = false;
+      }
+
+      function startRegistration() {
+        if (!state.qr) return;
         setStep(1);
       }
 
@@ -2136,6 +2056,10 @@
         $("part-search-message").hidden = true;
         closePartSearch();
         $("report-form").reset();
+        $("scan-eyebrow").textContent = "KQMS PROCESS NONCONFORMANCE";
+        $("scan-title").innerHTML = "현장 QR 코드를<br>스캔해주세요";
+        $("scan-description").textContent = "공정에 부착된 QR 코드를 휴대폰 기본 카메라로 스캔해 접속해주세요.";
+        $("registration-start").hidden = true;
         $("date").value = today;
         renderScrapProgressOptions();
         syncDisposition();
@@ -2147,7 +2071,7 @@
         setStep(0);
       }
 
-      $("sample-scan").addEventListener("click", () => openForm(testUniversalQrCode, true));
+      $("registration-start").addEventListener("click", startRegistration);
 
       $("open-part-search").addEventListener("click", openPartSearch);
       $("part-search").addEventListener("click", searchParts);
@@ -2266,7 +2190,7 @@
       void loadScrapProgress();
       const qrFromUrl = new URLSearchParams(location.search).get("qr");
       if (qrFromUrl && qrFromUrl.trim()) {
-        openForm(qrFromUrl.trim(), false);
+        confirmQr(qrFromUrl.trim());
       } else {
         try {
           const receipt = JSON.parse(localStorage.getItem(submissionReceiptStorageKey) || "null");
