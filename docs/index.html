@@ -1210,7 +1210,7 @@
       <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
         <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>마지막 1단계</span></div>
         <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
-        <p>접수번호와 핵심 정보가 자동으로 정리됩니다. 사진과 내부 확인키는 포함되지 않습니다.</p>
+        <p>첨부한 사진이 있으면 접수번호·핵심 정보와 함께 공유됩니다. 내부 확인키는 포함되지 않습니다.</p>
         <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
           <i class="bi bi-chat-fill" aria-hidden="true"></i>
           카카오톡 채팅방에 공유하기
@@ -1421,14 +1421,23 @@
 
       async function shareToKakao() {
         const shareText = buildKakaoShareText();
+        const shareFiles = state.photos.map((photo) => photo.file);
         setKakaoShareUi("loading", "휴대폰 공유창을 여는 중입니다.");
         if (!navigator.share) {
           setKakaoShareUi("error", "이 브라우저에서는 공유창을 열 수 없습니다. 공유 문구를 복사해주세요.");
           return;
         }
+        if (shareFiles.length > 0 && (typeof navigator.canShare !== "function" || !navigator.canShare({ files: shareFiles }))) {
+          setKakaoShareUi("error", "이 기기에서는 첨부 사진을 함께 공유할 수 없습니다. 공유 문구를 복사해주세요.");
+          return;
+        }
         try {
-          await navigator.share({ title: "KQMS 공정부적합 접수 완료", text: shareText });
-          setKakaoShareUi("opened", "공유창에서 카카오톡을 선택한 뒤 원하는 채팅방으로 전송해주세요.");
+          const shareData = { title: "KQMS 공정부적합 접수 완료", text: shareText };
+          if (shareFiles.length > 0) shareData.files = shareFiles;
+          await navigator.share(shareData);
+          setKakaoShareUi("opened", shareFiles.length > 0
+            ? `첨부 사진 ${shareFiles.length}장과 접수정보를 카카오톡 채팅방으로 전송해주세요.`
+            : "공유창에서 카카오톡을 선택한 뒤 원하는 채팅방으로 전송해주세요.");
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
             setKakaoShareUi("ready", "공유가 취소되었습니다. 버튼을 눌러 카카오톡을 다시 선택해주세요.");
