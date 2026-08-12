@@ -1215,7 +1215,7 @@
           <i class="bi bi-chat-fill" aria-hidden="true"></i>
           카카오톡 채팅방에 공유하기
         </button>
-        <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">카카오톡에서 전송할 채팅방을 선택해야 현장 인계가 끝납니다.</p>
+        <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">공유창에서 카카오톡을 선택한 뒤 원하는 채팅방으로 전송해주세요.</p>
         <button id="kakao-copy" class="kakao-copy-button" type="button"><i class="bi bi-copy" aria-hidden="true"></i> 공유 문구 복사</button>
       </section>
 
@@ -1322,12 +1322,7 @@
       const submissionStatusUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/status";
       const submissionRetryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/retry";
       const submissionReceiptStorageKey = "kqms-qr-submission-receipt";
-      const publicFormUrl = "https://sy-1190.github.io/KQMS-QR-Scrap-Form/";
-      const kakaoJavaScriptKey = "02acbc681fd564246f01a527990c6d12";
-      const kakaoSdkUrl = "https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js";
-      const kakaoSdkScriptId = "kakao-javascript-sdk";
       const maxPhotoSize = 10 * 1024 * 1024;
-      let kakaoSdkPromise = null;
       const deliveryPresentation = {
         queued: { icon: "bi-hourglass-split", eyebrow: "WAITING FOR KQMS", title: "KQMS 전송을 기다리고 있습니다", badge: "전송 대기" },
         processing: { icon: "bi-arrow-repeat", eyebrow: "SENDING TO KQMS", title: "KQMS에 접수하고 있습니다", badge: "접수 중" },
@@ -1414,81 +1409,32 @@
         return lines.join("\n");
       }
 
-      function loadKakaoSdk() {
-        if (window.Kakao) return Promise.resolve(window.Kakao);
-        if (kakaoSdkPromise) return kakaoSdkPromise;
-        kakaoSdkPromise = new Promise((resolve, reject) => {
-          document.getElementById(kakaoSdkScriptId)?.remove();
-          const script = document.createElement("script");
-          script.id = kakaoSdkScriptId;
-          script.src = kakaoSdkUrl;
-          script.async = true;
-          script.onload = () => window.Kakao ? resolve(window.Kakao) : reject(new Error("카카오 SDK를 초기화하지 못했습니다."));
-          script.onerror = () => {
-            script.remove();
-            reject(new Error("카카오 공유 기능을 불러오지 못했습니다."));
-          };
-          document.head.append(script);
-        }).catch((error) => {
-          kakaoSdkPromise = null;
-          throw error;
-        });
-        return kakaoSdkPromise;
-      }
-
-      async function initializeKakaoSdk() {
-        const kakao = await loadKakaoSdk();
-        if (!kakao.isInitialized()) kakao.init(kakaoJavaScriptKey);
-        return kakao;
-      }
-
       function setKakaoShareUi(status, message) {
         state.kakaoShareStatus = status;
         const button = $("kakao-share");
         button.disabled = status === "loading";
         button.innerHTML = status === "loading"
-          ? '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 카카오톡 공유 준비 중'
-          : `<i class="bi bi-chat-fill" aria-hidden="true"></i> ${status === "opened" ? "채팅방 다시 선택" : status === "error" ? "카카오톡 공유 다시 시도" : "카카오톡 채팅방에 공유하기"}`;
+          ? '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 공유창 여는 중'
+          : `<i class="bi bi-chat-fill" aria-hidden="true"></i> ${status === "opened" ? "카카오톡 다시 선택" : status === "error" ? "공유 다시 시도" : "카카오톡 채팅방에 공유하기"}`;
         $("kakao-share-status").textContent = message;
-      }
-
-      async function prepareKakaoShare() {
-        if (["loading", "ready", "opened"].includes(state.kakaoShareStatus)) return;
-        setKakaoShareUi("loading", "카카오톡 공유 기능을 준비하고 있습니다.");
-        try {
-          await initializeKakaoSdk();
-          setKakaoShareUi("ready", "카카오톡에서 전송할 채팅방을 선택해야 현장 인계가 끝납니다.");
-        } catch {
-          setKakaoShareUi("error", "카카오톡 연결에 실패했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
-        }
       }
 
       async function shareToKakao() {
         const shareText = buildKakaoShareText();
-        setKakaoShareUi("loading", "카카오톡 채팅방 선택창을 여는 중입니다.");
+        setKakaoShareUi("loading", "휴대폰 공유창을 여는 중입니다.");
+        if (!navigator.share) {
+          setKakaoShareUi("error", "이 브라우저에서는 공유창을 열 수 없습니다. 공유 문구를 복사해주세요.");
+          return;
+        }
         try {
-          const kakao = await initializeKakaoSdk();
-          kakao.Share.sendDefault({
-            objectType: "text",
-            text: shareText,
-            link: { mobileWebUrl: publicFormUrl, webUrl: publicFormUrl },
-            buttonTitle: "신고서 열기"
-          });
-          setKakaoShareUi("opened", "카카오톡 선택창이 열렸습니다. 원하는 채팅방에서 전송을 완료해주세요.");
-        } catch {
-          if (navigator.share) {
-            try {
-              await navigator.share({ title: "KQMS 공정부적합 접수 완료", text: shareText, url: publicFormUrl });
-              setKakaoShareUi("opened", "공유 앱 선택창이 열렸습니다. 카카오톡 채팅방에서 전송을 완료해주세요.");
-              return;
-            } catch (error) {
-              if (error instanceof DOMException && error.name === "AbortError") {
-                setKakaoShareUi("ready", "공유가 취소되었습니다. 버튼을 눌러 채팅방을 다시 선택해주세요.");
-                return;
-              }
-            }
+          await navigator.share({ title: "KQMS 공정부적합 접수 완료", text: shareText });
+          setKakaoShareUi("opened", "공유창에서 카카오톡을 선택한 뒤 원하는 채팅방으로 전송해주세요.");
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            setKakaoShareUi("ready", "공유가 취소되었습니다. 버튼을 눌러 카카오톡을 다시 선택해주세요.");
+            return;
           }
-          setKakaoShareUi("error", "카카오톡 연결에 실패했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
+          setKakaoShareUi("error", "공유창을 열지 못했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
         }
       }
 
@@ -1534,7 +1480,9 @@
         $("retry-submission").hidden = result.status !== "failed";
         $("restart").hidden = !["completed", "failed"].includes(result.status);
         $("kakao-share-panel").hidden = result.status !== "completed";
-        if (result.status === "completed") void prepareKakaoShare();
+        if (result.status === "completed" && state.kakaoShareStatus === "idle") {
+          setKakaoShareUi("ready", "공유창에서 카카오톡을 선택한 뒤 원하는 채팅방으로 전송해주세요.");
+        }
         $("back").classList.toggle("is-invisible", !["completed", "failed"].includes(result.status));
         if (["completed", "failed"].includes(result.status)) stopStatusPolling();
       }
