@@ -823,6 +823,44 @@
     .success.delivery-retrying .success-mark { color: var(--amber); background: var(--amber-soft); }
     .success.delivery-failed .success-mark { color: var(--red); background: #fff0ef; }
     .success-copy { margin-bottom: 22px; }
+    .kakao-share-panel {
+      margin: 0 0 18px;
+      padding: 20px;
+      overflow: hidden;
+      border: 1px solid #e2c900;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #fffdf0 0%, #fff7b8 100%);
+      box-shadow: 0 12px 30px rgba(94, 80, 0, .13);
+      text-align: left;
+    }
+    .kakao-share-step { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; color: #4a4200; font-size: 11px; font-weight: 900; }
+    .kakao-share-step span { margin-left: auto; padding: 5px 8px; border-radius: 999px; color: #191600; background: #fee500; }
+    .kakao-share-panel h2 { margin: 0; color: #191919; font-size: 19px; line-height: 1.35; }
+    .kakao-share-panel > p { margin: 8px 0 16px; color: #645b19; font-size: 12px; line-height: 1.55; }
+    .kakao-share-button {
+      display: flex;
+      width: 100%;
+      min-height: 58px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid #d6c000;
+      border-radius: 12px;
+      color: #191919;
+      background: #fee500;
+      box-shadow: 0 7px 16px rgba(99, 85, 0, .17);
+      font-size: 15px;
+      font-weight: 900;
+      transition: transform 140ms cubic-bezier(.23, 1, .32, 1), box-shadow 180ms ease;
+    }
+    .kakao-share-button i { font-size: 20px; }
+    .kakao-share-button:active { transform: scale(.97); }
+    .kakao-share-button:disabled { cursor: wait; opacity: .72; }
+    .kakao-share-panel .kakao-share-status { margin: 11px 0 0; color: #514900; font-size: 11px; font-weight: 800; text-align: center; }
+    .kakao-copy-button { display: flex; margin: 11px auto 0; align-items: center; gap: 6px; border: 0; color: #5d551b; background: transparent; font-size: 11px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+    @media (hover: hover) and (pointer: fine) {
+      .kakao-share-button:hover:not(:disabled) { box-shadow: 0 9px 20px rgba(99, 85, 0, .23); transform: translateY(-1px); }
+    }
     .receipt { text-align: left; }
     .receipt-title {
       display: flex;
@@ -1169,6 +1207,18 @@
       <p id="delivery-message" class="success-copy" role="status" aria-live="polite">KQMS 전송을 기다리고 있습니다.</p>
       <p id="duplicate-validation-note" class="status-note" role="status" hidden>동일한 제출 요청의 기존 처리 상태를 표시합니다.</p>
 
+      <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
+        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>마지막 1단계</span></div>
+        <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
+        <p>접수번호와 핵심 정보가 자동으로 정리됩니다. 사진과 내부 확인키는 포함되지 않습니다.</p>
+        <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
+          <i class="bi bi-chat-fill" aria-hidden="true"></i>
+          카카오톡 채팅방에 공유하기
+        </button>
+        <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">카카오톡에서 전송할 채팅방을 선택해야 현장 인계가 끝납니다.</p>
+        <button id="kakao-copy" class="kakao-copy-button" type="button"><i class="bi bi-copy" aria-hidden="true"></i> 공유 문구 복사</button>
+      </section>
+
       <div class="receipt">
         <div class="receipt-title">
           <span>접수 처리 결과</span>
@@ -1256,7 +1306,10 @@
         receiptToken: "",
         deliveryStatus: "queued",
         statusPollTimer: null,
-        retryingSubmission: false
+        retryingSubmission: false,
+        reportNumbers: [],
+        shareSnapshot: null,
+        kakaoShareStatus: "idle"
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1269,7 +1322,12 @@
       const submissionStatusUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/status";
       const submissionRetryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/retry";
       const submissionReceiptStorageKey = "kqms-qr-submission-receipt";
+      const publicFormUrl = "https://sy-1190.github.io/KQMS-QR-Scrap-Form/";
+      const kakaoJavaScriptKey = "02acbc681fd564246f01a527990c6d12";
+      const kakaoSdkUrl = "https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js";
+      const kakaoSdkScriptId = "kakao-javascript-sdk";
       const maxPhotoSize = 10 * 1024 * 1024;
+      let kakaoSdkPromise = null;
       const deliveryPresentation = {
         queued: { icon: "bi-hourglass-split", eyebrow: "WAITING FOR KQMS", title: "KQMS 전송을 기다리고 있습니다", badge: "전송 대기" },
         processing: { icon: "bi-arrow-repeat", eyebrow: "SENDING TO KQMS", title: "KQMS에 접수하고 있습니다", badge: "접수 중" },
@@ -1309,6 +1367,140 @@
         return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ko-KR", { hour12: false });
       }
 
+      function clipShareValue(value, maximum) {
+        const normalized = String(value || "").replace(/\s+/g, " ").trim() || "-";
+        if (normalized.length <= maximum) return normalized;
+        return maximum <= 1 ? "…" : `${normalized.slice(0, maximum - 1)}…`;
+      }
+
+      function createShareSnapshot(payload) {
+        const report = payload.processNonconformance;
+        return {
+          occurrenceDate: report.date,
+          author: report.reporter.name,
+          teamDepartment: report.reporter.teamDepartment,
+          submissionType: report.submissionType,
+          disposition: report.disposition,
+          process: report.processName,
+          parts: report.parts.map((part) => ({ partNo: part.partNo, quantity: String(part.qty) })),
+          description: report.description
+        };
+      }
+
+      function buildKakaoShareText() {
+        const snapshot = state.shareSnapshot;
+        const submissionType = snapshot?.submissionType === "treasure_hunt" ? "보물찾기" : "자진신고";
+        const disposition = snapshot?.disposition === "scrap" ? "폐기" : "수정";
+        const partSummary = snapshot?.parts.map((part) => `${part.partNo} ${part.quantity}EA`).join(", ") || "-";
+        const candidates = [
+          "[KQMS 공정부적합 접수 완료]",
+          `접수번호: ${clipShareValue(state.reportNumbers.join(", ") || state.submissionId, 28)}`,
+          ...(snapshot ? [
+            `발생일: ${snapshot.occurrenceDate || "-"}`,
+            `작성: ${clipShareValue(`${snapshot.author} / ${snapshot.teamDepartment}`, 26)}`,
+            `구분: ${submissionType} · ${disposition}`,
+            `공정: ${clipShareValue(snapshot.process, 18)}`,
+            `품번: ${clipShareValue(partSummary, 34)}`,
+            `현상: ${clipShareValue(snapshot.description, 34)}`
+          ] : [])
+        ];
+        const lines = [];
+        for (const candidate of candidates) {
+          const remaining = 200 - lines.join("\n").length - (lines.length > 0 ? 1 : 0);
+          if (remaining <= 0) break;
+          lines.push(clipShareValue(candidate, remaining));
+          if (candidate.length > remaining) break;
+        }
+        return lines.join("\n");
+      }
+
+      function loadKakaoSdk() {
+        if (window.Kakao) return Promise.resolve(window.Kakao);
+        if (kakaoSdkPromise) return kakaoSdkPromise;
+        kakaoSdkPromise = new Promise((resolve, reject) => {
+          document.getElementById(kakaoSdkScriptId)?.remove();
+          const script = document.createElement("script");
+          script.id = kakaoSdkScriptId;
+          script.src = kakaoSdkUrl;
+          script.async = true;
+          script.onload = () => window.Kakao ? resolve(window.Kakao) : reject(new Error("카카오 SDK를 초기화하지 못했습니다."));
+          script.onerror = () => {
+            script.remove();
+            reject(new Error("카카오 공유 기능을 불러오지 못했습니다."));
+          };
+          document.head.append(script);
+        }).catch((error) => {
+          kakaoSdkPromise = null;
+          throw error;
+        });
+        return kakaoSdkPromise;
+      }
+
+      async function initializeKakaoSdk() {
+        const kakao = await loadKakaoSdk();
+        if (!kakao.isInitialized()) kakao.init(kakaoJavaScriptKey);
+        return kakao;
+      }
+
+      function setKakaoShareUi(status, message) {
+        state.kakaoShareStatus = status;
+        const button = $("kakao-share");
+        button.disabled = status === "loading";
+        button.innerHTML = status === "loading"
+          ? '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 카카오톡 공유 준비 중'
+          : `<i class="bi bi-chat-fill" aria-hidden="true"></i> ${status === "opened" ? "채팅방 다시 선택" : status === "error" ? "카카오톡 공유 다시 시도" : "카카오톡 채팅방에 공유하기"}`;
+        $("kakao-share-status").textContent = message;
+      }
+
+      async function prepareKakaoShare() {
+        if (["loading", "ready", "opened"].includes(state.kakaoShareStatus)) return;
+        setKakaoShareUi("loading", "카카오톡 공유 기능을 준비하고 있습니다.");
+        try {
+          await initializeKakaoSdk();
+          setKakaoShareUi("ready", "카카오톡에서 전송할 채팅방을 선택해야 현장 인계가 끝납니다.");
+        } catch {
+          setKakaoShareUi("error", "카카오톡 연결에 실패했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
+        }
+      }
+
+      async function shareToKakao() {
+        const shareText = buildKakaoShareText();
+        setKakaoShareUi("loading", "카카오톡 채팅방 선택창을 여는 중입니다.");
+        try {
+          const kakao = await initializeKakaoSdk();
+          kakao.Share.sendDefault({
+            objectType: "text",
+            text: shareText,
+            link: { mobileWebUrl: publicFormUrl, webUrl: publicFormUrl },
+            buttonTitle: "신고서 열기"
+          });
+          setKakaoShareUi("opened", "카카오톡 선택창이 열렸습니다. 원하는 채팅방에서 전송을 완료해주세요.");
+        } catch {
+          if (navigator.share) {
+            try {
+              await navigator.share({ title: "KQMS 공정부적합 접수 완료", text: shareText, url: publicFormUrl });
+              setKakaoShareUi("opened", "공유 앱 선택창이 열렸습니다. 카카오톡 채팅방에서 전송을 완료해주세요.");
+              return;
+            } catch (error) {
+              if (error instanceof DOMException && error.name === "AbortError") {
+                setKakaoShareUi("ready", "공유가 취소되었습니다. 버튼을 눌러 채팅방을 다시 선택해주세요.");
+                return;
+              }
+            }
+          }
+          setKakaoShareUi("error", "카카오톡 연결에 실패했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
+        }
+      }
+
+      async function copyKakaoShareText() {
+        try {
+          await navigator.clipboard.writeText(buildKakaoShareText());
+          $("kakao-share-status").textContent = "공유 문구를 복사했습니다. 카카오톡 채팅방에 붙여넣어주세요.";
+        } catch {
+          $("kakao-share-status").textContent = "공유 문구를 복사하지 못했습니다. 카카오톡 공유를 다시 시도해주세요.";
+        }
+      }
+
       function stopStatusPolling() {
         if (state.statusPollTimer !== null) window.clearInterval(state.statusPollTimer);
         state.statusPollTimer = null;
@@ -1332,6 +1524,7 @@
         $("completed-at-row").hidden = !result.completedAt;
         $("completed-at").textContent = formatKoreanDateTime(result.completedAt);
         const reportNumbers = Array.isArray(result.reportNumbers) ? result.reportNumbers : [];
+        state.reportNumbers = reportNumbers;
         $("report-numbers-row").hidden = reportNumbers.length === 0;
         $("report-numbers").replaceChildren(...reportNumbers.map((number) => {
           const item = document.createElement("span");
@@ -1340,6 +1533,8 @@
         }));
         $("retry-submission").hidden = result.status !== "failed";
         $("restart").hidden = !["completed", "failed"].includes(result.status);
+        $("kakao-share-panel").hidden = result.status !== "completed";
+        if (result.status === "completed") void prepareKakaoShare();
         $("back").classList.toggle("is-invisible", !["completed", "failed"].includes(result.status));
         if (["completed", "failed"].includes(result.status)) stopStatusPolling();
       }
@@ -2001,7 +2196,9 @@
             size: photo.file.size,
             base64: await fileAsBase64(photo.file)
           })));
-          const body = JSON.stringify({ ...buildValidationPayload(), photos });
+          const validationPayload = buildValidationPayload();
+          state.shareSnapshot = createShareSnapshot(validationPayload);
+          const body = JSON.stringify({ ...validationPayload, photos });
           if (!state.submissionAttempt || state.submissionAttempt.body !== body) {
             state.submissionAttempt = {
               body,
@@ -2034,7 +2231,8 @@
           $("duplicate-validation-note").hidden = result.duplicate !== true;
           localStorage.setItem(submissionReceiptStorageKey, JSON.stringify({
             validationId: result.validationId,
-            receiptToken: result.receiptToken
+            receiptToken: result.receiptToken,
+            shareSnapshot: state.shareSnapshot
           }));
           setStep(3);
           renderDeliveryStatus({ status: result.status, attempts: 0, message: result.message, reportNumbers: [] });
@@ -2070,6 +2268,9 @@
         state.receiptToken = "";
         state.deliveryStatus = "queued";
         state.retryingSubmission = false;
+        state.reportNumbers = [];
+        state.shareSnapshot = null;
+        state.kakaoShareStatus = "idle";
         $("part-query").value = "";
         $("part-results").replaceChildren();
         $("part-search-results").hidden = true;
@@ -2203,6 +2404,10 @@
 
       $("retry-submission").addEventListener("click", retrySubmission);
 
+      $("kakao-share").addEventListener("click", shareToKakao);
+
+      $("kakao-copy").addEventListener("click", copyKakaoShareText);
+
       $("restart").addEventListener("click", reset);
 
       $("back").addEventListener("click", () => {
@@ -2224,6 +2429,7 @@
           if (receipt?.validationId && receipt.receiptToken) {
             state.submissionId = receipt.validationId;
             state.receiptToken = receipt.receiptToken;
+            state.shareSnapshot = receipt.shareSnapshot || null;
             $("validation-id").textContent = receipt.validationId;
             $("receipt-qr-row").hidden = true;
             setStep(3);
