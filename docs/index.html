@@ -1210,7 +1210,7 @@
       <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
         <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>마지막 1단계</span></div>
         <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
-        <p>첨부한 사진이 있으면 접수번호·핵심 정보와 함께 공유됩니다. 내부 확인키는 포함되지 않습니다.</p>
+        <p>첨부 사진이 있으면 접수정보 요약 이미지를 첫 장으로 만들어 원본 사진과 함께 공유합니다. 내부 확인키는 포함되지 않습니다.</p>
         <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
           <i class="bi bi-chat-fill" aria-hidden="true"></i>
           카카오톡 채팅방에 공유하기
@@ -1409,6 +1409,50 @@
         return lines.join("\n");
       }
 
+      function createShareSummaryImageFile(shareText) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1080;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("접수정보 요약 이미지를 만들지 못했습니다.");
+
+        context.font = "700 38px system-ui, sans-serif";
+        const wrappedLines = [];
+        for (const sourceLine of shareText.split("\n").slice(1)) {
+          let line = "";
+          for (const character of sourceLine) {
+            const candidate = line + character;
+            if (line && context.measureText(candidate).width > 860) {
+              wrappedLines.push(line);
+              line = character;
+            } else {
+              line = candidate;
+            }
+          }
+          if (line) wrappedLines.push(line);
+        }
+
+        canvas.height = 320 + Math.max(1, wrappedLines.length) * 64;
+        context.fillStyle = "#eef3fb";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = "#123b7a";
+        context.fillRect(0, 0, canvas.width, 180);
+        context.fillStyle = "#ffffff";
+        context.font = "800 52px system-ui, sans-serif";
+        context.fillText("KQMS 공정부적합 접수 완료", 72, 108);
+        context.fillStyle = "#ffffff";
+        context.fillRect(60, 220, 960, canvas.height - 280);
+        context.fillStyle = "#14213d";
+        context.font = "700 38px system-ui, sans-serif";
+        wrappedLines.forEach((line, index) => context.fillText(line, 100, 290 + index * 64));
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const encoded = dataUrl.slice(dataUrl.indexOf(",") + 1);
+        const binary = window.atob(encoded);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        return new File([bytes], "KQMS-접수정보.png", { type: "image/png", lastModified: Date.now() });
+      }
+
       function setKakaoShareUi(status, message) {
         state.kakaoShareStatus = status;
         const button = $("kakao-share");
@@ -1421,11 +1465,20 @@
 
       async function shareToKakao() {
         const shareText = buildKakaoShareText();
-        const shareFiles = state.photos.map((photo) => photo.file);
+        const originalFiles = state.photos.map((photo) => photo.file);
         setKakaoShareUi("loading", "휴대폰 공유창을 여는 중입니다.");
         if (!navigator.share) {
           setKakaoShareUi("error", "이 브라우저에서는 공유창을 열 수 없습니다. 공유 문구를 복사해주세요.");
           return;
+        }
+        let shareFiles = originalFiles;
+        if (originalFiles.length > 0) {
+          try {
+            shareFiles = [createShareSummaryImageFile(shareText), ...originalFiles];
+          } catch {
+            setKakaoShareUi("error", "접수정보 요약 이미지를 만들지 못했습니다. 공유 문구를 복사해주세요.");
+            return;
+          }
         }
         if (shareFiles.length > 0 && (typeof navigator.canShare !== "function" || !navigator.canShare({ files: shareFiles }))) {
           setKakaoShareUi("error", "이 기기에서는 첨부 사진을 함께 공유할 수 없습니다. 공유 문구를 복사해주세요.");
@@ -1435,8 +1488,8 @@
           const shareData = { title: "KQMS 공정부적합 접수 완료", text: shareText };
           if (shareFiles.length > 0) shareData.files = shareFiles;
           await navigator.share(shareData);
-          setKakaoShareUi("opened", shareFiles.length > 0
-            ? `첨부 사진 ${shareFiles.length}장과 접수정보를 카카오톡 채팅방으로 전송해주세요.`
+          setKakaoShareUi("opened", originalFiles.length > 0
+            ? `접수정보 요약 이미지와 원본 사진 ${originalFiles.length}장을 카카오톡 채팅방으로 전송해주세요.`
             : "공유창에서 카카오톡을 선택한 뒤 원하는 채팅방으로 전송해주세요.");
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
