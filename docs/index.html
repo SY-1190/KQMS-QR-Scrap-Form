@@ -2258,24 +2258,25 @@
           $("scan-footnote-text").textContent = message;
           retryButton.hidden = false;
         };
-        const submitTurnstileToken = async (turnstileToken) => {
+        const submitTurnstileToken = (turnstileToken) => {
           if (submitted || !turnstileToken) return;
           submitted = true;
           clearResponseWatch();
           retryButton.hidden = true;
           $("scan-description").textContent = "신고서를 안전하게 열고 있습니다.";
-          try {
-            const response = await fetch(qrSessionUrl, {
-              method: "POST",
-              headers: { accept: "application/json", "content-type": "application/json" },
-              body: JSON.stringify({ qrToken, turnstileToken })
-            });
-            const result = await response.json();
-            if (!response.ok || !result.redirectUrl) throw new Error(result.message || "QR 확인에 실패했습니다.");
-            location.replace(result.redirectUrl);
-          } catch (error) {
-            showChallengeError(error instanceof Error ? error.message : "QR 확인에 실패했습니다. 다시 시도해주세요.");
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = qrSessionUrl;
+          form.acceptCharset = "UTF-8";
+          for (const [name, value] of Object.entries({ qrToken, turnstileToken })) {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
           }
+          document.body.appendChild(form);
+          form.submit();
         };
 
         retryButton.onclick = () => {
@@ -2296,13 +2297,13 @@
             action: "qr_access",
             theme: "light",
             size: "flexible",
-            callback: (turnstileToken) => void submitTurnstileToken(turnstileToken),
+            callback: submitTurnstileToken,
             "error-callback": () => showChallengeError("사람 확인에 실패했습니다. 다시 시도해주세요."),
             "expired-callback": () => showChallengeError("확인 시간이 만료되었습니다. 다시 시도해주세요.")
           });
           responsePoll = setInterval(() => {
             const token = container.querySelector('input[name="cf-turnstile-response"]')?.value.trim();
-            if (token) void submitTurnstileToken(token);
+            if (token) submitTurnstileToken(token);
           }, 250);
           responseTimeout = setTimeout(() => {
             if (!submitted) showChallengeError("사람 확인이 지연되고 있습니다. 다시 시도해주세요.");
