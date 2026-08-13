@@ -975,6 +975,10 @@
         <p id="scan-description">공정에 부착된 QR 코드를 휴대폰 기본 카메라로 스캔해 접속해주세요.</p>
       </div>
       <div id="turnstile-box" class="turnstile-box" aria-label="사람 확인" hidden></div>
+      <button id="qr-check-retry" class="primary" type="button" hidden>
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        사람 확인 다시 시도
+      </button>
       <button id="registration-start" class="primary" type="button" hidden>
         <i class="bi bi-pencil-square" aria-hidden="true"></i>
         등록 시작
@@ -2233,54 +2237,86 @@
         $("scan-footnote-icon").className = "bi bi-shield-check";
         $("scan-footnote-text").textContent = "확인 후 발급되는 접수권은 10분 동안 1회 제출에만 사용할 수 있습니다.";
         const container = $("turnstile-box");
+        const retryButton = $("qr-check-retry");
         container.hidden = false;
+        retryButton.hidden = true;
+        let widgetId = "";
+        let widgetApi = null;
+        let submitted = false;
+        let responsePoll = 0;
+        let responseTimeout = 0;
+
+        const clearResponseWatch = () => {
+          clearInterval(responsePoll);
+          clearTimeout(responseTimeout);
+        };
+        const showChallengeError = (message) => {
+          clearResponseWatch();
+          state.qrAccessStatus = "error";
+          $("scan-footnote").classList.add("is-error");
+          $("scan-footnote-icon").className = "bi bi-exclamation-circle";
+          $("scan-footnote-text").textContent = message;
+          retryButton.hidden = false;
+        };
+        const submitTurnstileToken = async (turnstileToken) => {
+          if (submitted || !turnstileToken) return;
+          submitted = true;
+          clearResponseWatch();
+          retryButton.hidden = true;
+          $("scan-description").textContent = "신고서를 안전하게 열고 있습니다.";
+          try {
+            const response = await fetch(qrSessionUrl, {
+              method: "POST",
+              headers: { accept: "application/json", "content-type": "application/json" },
+              body: JSON.stringify({ qrToken, turnstileToken })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.redirectUrl) throw new Error(result.message || "QR 확인에 실패했습니다.");
+            location.replace(result.redirectUrl);
+          } catch (error) {
+            showChallengeError(error instanceof Error ? error.message : "QR 확인에 실패했습니다. 다시 시도해주세요.");
+          }
+        };
+
+        retryButton.onclick = () => {
+          clearResponseWatch();
+          if (widgetId) widgetApi?.remove(widgetId);
+          container.replaceChildren();
+          startQrChallenge(qrToken);
+        };
 
         const renderWidget = () => {
-          let widgetId = "";
-          widgetId = window.turnstile.render(container, {
+          if (!window.turnstile) {
+            showChallengeError("사람 확인 기능을 불러오지 못했습니다. 다시 시도해주세요.");
+            return;
+          }
+          widgetApi = window.turnstile;
+          widgetId = widgetApi.render(container, {
             sitekey: turnstileSiteKey,
             action: "qr_access",
             theme: "light",
             size: "flexible",
-            callback: async (turnstileToken) => {
-              $("scan-description").textContent = "신고서를 안전하게 열고 있습니다.";
-              try {
-                const response = await fetch(qrSessionUrl, {
-                  method: "POST",
-                  headers: { accept: "application/json", "content-type": "application/json" },
-                  body: JSON.stringify({ qrToken, turnstileToken })
-                });
-                const result = await response.json();
-                if (!response.ok || !result.redirectUrl) throw new Error(result.message || "QR 확인에 실패했습니다.");
-                location.replace(result.redirectUrl);
-              } catch (error) {
-                state.qrAccessStatus = "error";
-                $("scan-footnote").classList.add("is-error");
-                $("scan-footnote-icon").className = "bi bi-exclamation-circle";
-                $("scan-footnote-text").textContent = error instanceof Error ? error.message : "QR 확인에 실패했습니다. 다시 시도해주세요.";
-                window.turnstile.reset(widgetId);
-              }
-            },
-            "error-callback": () => {
-              state.qrAccessStatus = "error";
-              $("scan-footnote").classList.add("is-error");
-              $("scan-footnote-text").textContent = "사람 확인에 실패했습니다. 잠시 후 다시 시도해주세요.";
-            },
-            "expired-callback": () => {
-              state.qrAccessStatus = "error";
-              $("scan-footnote").classList.add("is-error");
-              $("scan-footnote-text").textContent = "확인 시간이 만료되었습니다. 다시 확인해주세요.";
-              window.turnstile.reset(widgetId);
-            }
+            callback: (turnstileToken) => void submitTurnstileToken(turnstileToken),
+            "error-callback": () => showChallengeError("사람 확인에 실패했습니다. 다시 시도해주세요."),
+            "expired-callback": () => showChallengeError("확인 시간이 만료되었습니다. 다시 시도해주세요.")
           });
+          responsePoll = setInterval(() => {
+            const token = container.querySelector('input[name="cf-turnstile-response"]')?.value.trim();
+            if (token) void submitTurnstileToken(token);
+          }, 250);
+          responseTimeout = setTimeout(() => {
+            if (!submitted) showChallengeError("사람 확인이 지연되고 있습니다. 다시 시도해주세요.");
+          }, 30000);
         };
         if (window.turnstile) renderWidget();
         else {
+          document.querySelector(`script[src="${turnstileScriptUrl}"]`)?.remove();
           const script = document.createElement("script");
           script.src = turnstileScriptUrl;
           script.async = true;
           script.defer = true;
           script.addEventListener("load", renderWidget, { once: true });
+          script.addEventListener("error", () => showChallengeError("사람 확인 기능을 불러오지 못했습니다. 다시 시도해주세요."), { once: true });
           document.head.appendChild(script);
         }
       }
