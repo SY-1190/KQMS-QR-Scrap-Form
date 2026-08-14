@@ -443,6 +443,7 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
     }
+    .part-customer-field { margin: 0; }
     .part-search-row label { position: relative; }
     .part-search-row label i {
       position: absolute;
@@ -1265,14 +1266,20 @@
           <button id="close-part-search" type="button" aria-label="품번 검색 닫기"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </header>
         <div class="part-search-dialog-body">
+          <label class="field part-customer-field">
+            <span>고객사 <b>*</b></span>
+            <select id="part-customer" required>
+              <option value="">고객사를 선택해주세요</option>
+            </select>
+          </label>
           <div class="part-search-row">
             <label>
               <i class="bi bi-search" aria-hidden="true"></i>
-              <input id="part-query" autocomplete="off" placeholder="품번 또는 모델 앞 2자 이상">
+              <input id="part-query" autocomplete="off" placeholder="품번 또는 모델 앞 2자 이상" disabled>
             </label>
-            <button id="part-search" class="secondary" type="button">검색</button>
+            <button id="part-search" class="secondary" type="button" disabled>검색</button>
           </div>
-          <p class="part-search-guide">앞부분이 일치하는 결과를 최대 50건 표시합니다.</p>
+          <p class="part-search-guide">선택한 고객사에서 앞부분이 일치하는 결과를 최대 20건 표시합니다.</p>
           <p id="part-search-loading" class="part-search-loading" role="status" hidden><i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 품번을 검색하고 있습니다.</p>
           <p id="part-search-message" class="part-search-message" role="status" hidden></p>
           <fieldset id="part-search-results" class="part-search-results" hidden>
@@ -1315,7 +1322,10 @@
         scrapProgressItems: [],
         scrapProgressIds: new Set(),
         scrapProgressStatus: "loading",
+        partCustomers: [],
+        partCustomerId: "",
         partSearchResults: [],
+        partSearchCache: new Map(),
         selectedPartNos: new Set(),
         submissionAttempt: null,
         submitting: false,
@@ -2071,10 +2081,29 @@
         renderPartLines();
       }
 
+      function renderPartCustomers() {
+        const select = $("part-customer");
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "고객사를 선택해주세요";
+        select.replaceChildren(placeholder);
+        state.partCustomers.forEach((customer) => {
+          const option = document.createElement("option");
+          option.value = customer.id;
+          option.textContent = customer.name;
+          select.append(option);
+        });
+        select.value = state.partCustomerId;
+      }
+
       function openPartSearch() {
+        state.partCustomerId = "";
         state.partSearchResults = [];
         state.selectedPartNos = new Set();
+        renderPartCustomers();
         $("part-query").value = "";
+        $("part-query").disabled = true;
+        $("part-search").disabled = true;
         $("part-results").replaceChildren();
         $("part-search-results").hidden = true;
         $("part-search-message").hidden = true;
@@ -2082,12 +2111,12 @@
         $("add-selected-parts").textContent = "선택한 0개 추가";
         $("part-search-backdrop").hidden = false;
         document.body.style.overflow = "hidden";
-        window.setTimeout(() => $("part-query").focus(), 0);
+        window.setTimeout(() => $("part-customer").focus(), 0);
       }
 
       function closePartSearch() {
         $("part-search-backdrop").hidden = true;
-        $("part-search").disabled = false;
+        $("part-search").disabled = !state.partCustomerId;
         $("part-search").textContent = "검색";
         document.body.style.overflow = "";
       }
@@ -2128,6 +2157,14 @@
       async function searchParts() {
         const query = $("part-query").value.trim();
         const message = $("part-search-message");
+        if (!state.partCustomerId) {
+          state.partSearchResults = [];
+          state.selectedPartNos = new Set();
+          renderPartSearchResults();
+          message.textContent = "고객사를 먼저 선택해주세요.";
+          message.hidden = false;
+          return;
+        }
         if (query.length < 2) {
           state.partSearchResults = [];
           state.selectedPartNos = new Set();
@@ -2142,7 +2179,17 @@
         message.hidden = true;
         state.selectedPartNos = new Set();
         try {
+          const cacheKey = `${state.partCustomerId}\n${query.toUpperCase()}`;
+          if (state.partSearchCache.has(cacheKey)) {
+            const cached = state.partSearchCache.get(cacheKey);
+            state.partSearchResults = cached;
+            renderPartSearchResults();
+            message.textContent = cached.length ? "" : "검색 결과가 없습니다. 품번을 수기로 작성해주세요.";
+            message.hidden = cached.length > 0;
+            return;
+          }
           const url = new URL(partSearchUrl);
+          url.searchParams.set("customerId", state.partCustomerId);
           url.searchParams.set("q", query);
           const response = await fetchWithQrAccess(url, { headers: { accept: "application/json" } });
           const body = await response.json();
@@ -2152,7 +2199,8 @@
             model: String(part.model || "").trim(),
             customer: String(part.customer || "").trim()
           }));
-          if (matches.length > 50 || matches.some((part) => !part.partNo)) throw new Error("invalid items");
+          if (matches.length > 20 || matches.some((part) => !part.partNo)) throw new Error("invalid items");
+          state.partSearchCache.set(cacheKey, matches);
           state.partSearchResults = matches;
           renderPartSearchResults();
           message.textContent = matches.length ? "" : "검색 결과가 없습니다. 품번을 수기로 작성해주세요.";
@@ -2163,7 +2211,7 @@
           message.textContent = "품번 검색을 이용할 수 없습니다. 잠시 후 다시 시도하거나 수기로 작성해주세요.";
           message.hidden = false;
         } finally {
-          $("part-search").disabled = false;
+          $("part-search").disabled = !state.partCustomerId;
           $("part-search").textContent = "검색";
           $("part-search-loading").hidden = true;
         }
@@ -2198,9 +2246,24 @@
             headers: { accept: "application/json", authorization: `Bearer ${accessToken}` }
           });
           const result = await response.json();
-          if (!response.ok || result.ok !== true || !result.displayCode || !result.expiresAt) {
+          if (
+            !response.ok
+            || result.ok !== true
+            || !result.displayCode
+            || !result.expiresAt
+            || !Array.isArray(result.customers)
+            || result.customers.length === 0
+            || result.customers.some((customer) => !String(customer?.id || "").trim() || !String(customer?.name || "").trim())
+          ) {
             throw new Error(result.message || "QR 접속 정보를 확인하지 못했습니다.");
           }
+          state.partCustomers = result.customers.map((customer) => ({
+            id: String(customer.id).trim(),
+            name: String(customer.name).trim()
+          }));
+          state.partCustomerId = "";
+          state.partSearchCache = new Map();
+          renderPartCustomers();
           state.qrAccessToken = accessToken;
           state.qrAccessStatus = "ready";
           state.qr = result.displayCode;
@@ -2216,6 +2279,10 @@
           state.qrAccessToken = "";
           state.qrAccessStatus = "error";
           state.qr = "";
+          state.partCustomers = [];
+          state.partCustomerId = "";
+          state.partSearchCache = new Map();
+          renderPartCustomers();
           $("registration-start").hidden = true;
           $("scan-eyebrow").textContent = "QR CHECK FAILED";
           $("scan-title").innerHTML = "현장 QR을<br>다시 촬영해주세요";
@@ -2497,7 +2564,10 @@
         state.teamDepartmentId = "";
         state.storageLocationId = "";
         state.scrapProgressIds = new Set();
+        state.partCustomers = [];
+        state.partCustomerId = "";
         state.partSearchResults = [];
+        state.partSearchCache = new Map();
         state.selectedPartNos = new Set();
         state.submissionAttempt = null;
         state.submitting = false;
@@ -2509,6 +2579,8 @@
         state.shareSnapshot = null;
         state.kakaoShareStatus = "idle";
         $("part-query").value = "";
+        $("part-query").disabled = true;
+        renderPartCustomers();
         $("part-results").replaceChildren();
         $("part-search-results").hidden = true;
         $("part-search-message").hidden = true;
@@ -2536,6 +2608,17 @@
 
       $("open-part-search").addEventListener("click", openPartSearch);
       $("part-search").addEventListener("click", searchParts);
+      $("part-customer").addEventListener("change", (event) => {
+        state.partCustomerId = event.target.value;
+        state.partSearchResults = [];
+        state.selectedPartNos = new Set();
+        $("part-query").value = "";
+        $("part-query").disabled = !state.partCustomerId;
+        $("part-search").disabled = !state.partCustomerId;
+        $("part-search-message").hidden = true;
+        renderPartSearchResults();
+        if (state.partCustomerId) $("part-query").focus();
+      });
       $("part-query").addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
