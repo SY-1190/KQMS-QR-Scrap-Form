@@ -1348,6 +1348,7 @@
       const submissionStatusUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/status";
       const submissionRetryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/retry";
       const submissionReceiptStorageKey = "kqms-qr-submission-receipt";
+      const submissionStatusPollIntervalMs = 5000;
       const publicFormUrl = "https://sy-1190.github.io/KQMS-QR-Scrap-Form/";
       const newReportUrl = publicFormUrl;
       const kakaoJavaScriptKey = "02acbc681fd564246f01a527990c6d12";
@@ -1660,7 +1661,7 @@
         stopStatusPolling();
         void refreshSubmissionStatus();
         if (["completed", "failed"].includes(state.deliveryStatus)) return;
-        state.statusPollTimer = window.setInterval(refreshSubmissionStatus, 2000);
+        state.statusPollTimer = window.setInterval(refreshSubmissionStatus, submissionStatusPollIntervalMs);
       }
 
       async function retrySubmission() {
@@ -1692,7 +1693,7 @@
         }
       }
 
-      async function loadProcesses() {
+      async function loadProcesses(preloadedItems) {
         const select = $("process");
         const status = $("process-status");
         state.processStatus = "loading";
@@ -1705,13 +1706,17 @@
         $("process-retry").hidden = true;
 
         try {
-          const response = await fetchWithQrAccess(processCatalogUrl, { headers: { accept: "application/json" } });
-          const body = await response.json();
-          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
-            throw new Error("공정 목록 응답이 올바르지 않습니다.");
+          let sourceItems = preloadedItems;
+          if (!Array.isArray(sourceItems)) {
+            const response = await fetchWithQrAccess(processCatalogUrl, { headers: { accept: "application/json" } });
+            const body = await response.json();
+            if (!response.ok || body.ok !== true || !Array.isArray(body.items)) {
+              throw new Error("공정 목록 응답이 올바르지 않습니다.");
+            }
+            sourceItems = body.items;
           }
-          const items = body.items.map((item) => ({ id: String(item.id).trim(), name: String(item.name).trim() }));
-          if (items.some((item) => !item.id || !item.name)) {
+          const items = sourceItems.map((item) => ({ id: String(item.id).trim(), name: String(item.name).trim() }));
+          if (items.length < 1 || items.length > 100 || items.some((item) => !item.id || !item.name)) {
             throw new Error("공정 목록 항목이 올바르지 않습니다.");
           }
 
@@ -1742,7 +1747,7 @@
         }
       }
 
-      async function loadTeamDepartments() {
+      async function loadTeamDepartments(preloadedItems) {
         const select = $("team-department");
         const status = $("team-department-status");
         state.teamDepartmentStatus = "loading";
@@ -1755,18 +1760,22 @@
         $("team-department-retry").hidden = true;
 
         try {
-          const response = await fetchWithQrAccess(teamDepartmentCatalogUrl, { headers: { accept: "application/json" } });
-          const body = await response.json();
-          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
-            throw new Error("작성 팀/부서 목록 응답이 올바르지 않습니다.");
+          let sourceItems = preloadedItems;
+          if (!Array.isArray(sourceItems)) {
+            const response = await fetchWithQrAccess(teamDepartmentCatalogUrl, { headers: { accept: "application/json" } });
+            const body = await response.json();
+            if (!response.ok || body.ok !== true || !Array.isArray(body.items)) {
+              throw new Error("작성 팀/부서 목록 응답이 올바르지 않습니다.");
+            }
+            sourceItems = body.items;
           }
-          const items = body.items.map((item) => ({
+          const items = sourceItems.map((item) => ({
             id: String(item.id).trim(),
             name: String(item.name).trim(),
             source: String(item.source).trim(),
             label: String(item.label).trim()
           }));
-          if (items.some((item) => !item.id || !item.name || !item.label || !["부서", "협력업체"].includes(item.source))) {
+          if (items.length < 1 || items.length > 100 || items.some((item) => !item.id || !item.name || !item.label || !["부서", "협력업체"].includes(item.source))) {
             throw new Error("작성 팀/부서 목록 항목이 올바르지 않습니다.");
           }
 
@@ -1839,7 +1848,7 @@
         }
       }
 
-      async function loadStorageLocations() {
+      async function loadStorageLocations(preloadedItems) {
         const select = $("storage-location");
         const status = $("storage-location-status");
         state.storageLocationStatus = "loading";
@@ -1852,18 +1861,22 @@
         $("storage-location-retry").hidden = true;
 
         try {
-          const response = await fetchWithQrAccess(storageLocationCatalogUrl, { headers: { accept: "application/json" } });
-          const body = await response.json();
-          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
-            throw new Error("폐기품 적치위치 목록 응답이 올바르지 않습니다.");
+          let sourceItems = preloadedItems;
+          if (!Array.isArray(sourceItems)) {
+            const response = await fetchWithQrAccess(storageLocationCatalogUrl, { headers: { accept: "application/json" } });
+            const body = await response.json();
+            if (!response.ok || body.ok !== true || !Array.isArray(body.items)) {
+              throw new Error("폐기품 적치위치 목록 응답이 올바르지 않습니다.");
+            }
+            sourceItems = body.items;
           }
-          const items = body.items.map((item) => ({
+          const items = sourceItems.map((item) => ({
             id: String(item.id).trim(),
             name: String(item.name).trim(),
             hasImage: item.hasImage === true,
             imageUrl: item.imageUrl ? String(item.imageUrl).trim() : null
           }));
-          if (items.some((item) => !item.id || !item.name || (item.hasImage && !item.imageUrl))) {
+          if (items.length < 1 || items.length > 100 || items.some((item) => !item.id || !item.name || (item.hasImage && !item.imageUrl))) {
             throw new Error("폐기품 적치위치 목록 항목이 올바르지 않습니다.");
           }
 
@@ -1923,7 +1936,7 @@
         });
       }
 
-      async function loadScrapProgress() {
+      async function loadScrapProgress(preloadedItems) {
         const status = $("scrap-progress-status");
         state.scrapProgressStatus = "loading";
         state.scrapProgressItems = [];
@@ -1934,13 +1947,17 @@
         renderScrapProgressOptions();
 
         try {
-          const response = await fetchWithQrAccess(scrapProgressCatalogUrl, { headers: { accept: "application/json" } });
-          const body = await response.json();
-          if (!response.ok || body.ok !== true || !Array.isArray(body.items) || body.items.length === 0) {
-            throw new Error("폐기제품 공정진행사항 목록 응답이 올바르지 않습니다.");
+          let sourceItems = preloadedItems;
+          if (!Array.isArray(sourceItems)) {
+            const response = await fetchWithQrAccess(scrapProgressCatalogUrl, { headers: { accept: "application/json" } });
+            const body = await response.json();
+            if (!response.ok || body.ok !== true || !Array.isArray(body.items)) {
+              throw new Error("폐기제품 공정진행사항 목록 응답이 올바르지 않습니다.");
+            }
+            sourceItems = body.items;
           }
-          const items = body.items.map((item) => ({ id: String(item.id).trim(), name: String(item.name).trim() }));
-          if (items.length > 100 || items.some((item) => !item.id || !item.name)) {
+          const items = sourceItems.map((item) => ({ id: String(item.id).trim(), name: String(item.name).trim() }));
+          if (items.length < 1 || items.length > 100 || items.some((item) => !item.id || !item.name)) {
             throw new Error("폐기제품 공정진행사항 목록 항목이 올바르지 않습니다.");
           }
           const availableIds = new Set(items.map((item) => item.id));
@@ -2260,7 +2277,16 @@
           $("scan-footnote-icon").className = "bi bi-shield-check";
           $("scan-footnote-text").textContent = "QR은 공정을 고정하지 않고 10분 동안 사용할 수 있는 1회 접수권을 발급합니다.";
           $("registration-start").hidden = false;
-          void Promise.all([loadProcesses(), loadTeamDepartments(), loadStorageLocations(), loadScrapProgress()]);
+          const catalogs = result.catalogs;
+          const bundledCatalogsReady = catalogs
+            && [catalogs.processes, catalogs.teamDepartments, catalogs.storageLocations, catalogs.scrapProgress]
+              .every((items) => Array.isArray(items) && items.length > 0);
+          void Promise.all([
+            loadProcesses(bundledCatalogsReady ? catalogs.processes : undefined),
+            loadTeamDepartments(bundledCatalogsReady ? catalogs.teamDepartments : undefined),
+            loadStorageLocations(bundledCatalogsReady ? catalogs.storageLocations : undefined),
+            loadScrapProgress(bundledCatalogsReady ? catalogs.scrapProgress : undefined)
+          ]);
         } catch (error) {
           state.qrAccessToken = "";
           state.qrAccessStatus = "error";
