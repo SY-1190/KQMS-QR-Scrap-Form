@@ -847,6 +847,9 @@
     .kakao-share-step span { margin-left: auto; padding: 5px 8px; border-radius: 999px; color: #191600; background: #fee500; }
     .kakao-share-panel h2 { margin: 0; color: #191919; font-size: 19px; line-height: 1.35; }
     .kakao-share-panel > p { margin: 8px 0 16px; color: #645b19; font-size: 12px; line-height: 1.55; }
+    .kakao-share-action + .kakao-share-action { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(100, 91, 25, .18); }
+    .kakao-share-action > strong { display: flex; margin-bottom: 9px; align-items: center; gap: 8px; color: #3d3700; font-size: 12px; }
+    .kakao-share-action > strong span { display: grid; width: 22px; height: 22px; border-radius: 50%; color: #191919; background: #fee500; font-size: 11px; place-items: center; }
     .kakao-share-button {
       display: flex;
       width: 100%;
@@ -866,10 +869,29 @@
     .kakao-share-button i { font-size: 20px; }
     .kakao-share-button:active { transform: scale(.97); }
     .kakao-share-button:disabled { cursor: wait; opacity: .72; }
+    .kakao-file-share-button {
+      display: flex;
+      width: 100%;
+      min-height: 54px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      border: 1px solid #9db8df;
+      border-radius: 12px;
+      color: var(--blue);
+      background: #fff;
+      box-shadow: 0 6px 14px rgba(11, 78, 199, .1);
+      font-size: 14px;
+      font-weight: 900;
+      transition: transform 140ms cubic-bezier(.23, 1, .32, 1), box-shadow 180ms ease;
+    }
+    .kakao-file-share-button:active { transform: scale(.97); }
+    .kakao-file-share-button:disabled { cursor: not-allowed; opacity: .52; }
     .kakao-share-panel .kakao-share-status { margin: 11px 0 0; color: #514900; font-size: 11px; font-weight: 800; text-align: center; }
     .kakao-copy-button { display: flex; margin: 11px auto 0; align-items: center; gap: 6px; border: 0; color: #5d551b; background: transparent; font-size: 11px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
     @media (hover: hover) and (pointer: fine) {
       .kakao-share-button:hover:not(:disabled) { box-shadow: 0 9px 20px rgba(99, 85, 0, .23); transform: translateY(-1px); }
+      .kakao-file-share-button:hover:not(:disabled) { box-shadow: 0 8px 18px rgba(11, 78, 199, .16); transform: translateY(-1px); }
     }
     .receipt { text-align: left; }
     .receipt-title {
@@ -1223,14 +1245,25 @@
       <p id="duplicate-validation-note" class="status-note" role="status" hidden>동일한 제출 요청의 기존 처리 상태를 표시합니다.</p>
 
       <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
-        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>마지막 1단계</span></div>
+        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>공유 2단계</span></div>
         <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
-        <p>접수정보는 항목별 텍스트로, 첨부 사진은 최대 3장까지 함께 공유합니다. 내부 확인키는 포함되지 않습니다.</p>
-        <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
-          <i class="bi bi-chat-fill" aria-hidden="true"></i>
-          카카오톡 채팅방에 공유하기
-        </button>
-        <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">카카오톡에서 공유할 채팅방을 선택해주세요.</p>
+        <p>접수정보를 먼저 공유한 뒤 실제 사진 파일을 같은 채팅방에 별도로 전달합니다. 내부 확인키는 포함되지 않습니다.</p>
+        <div class="kakao-share-action">
+          <strong><span>1</span> 접수정보 공유</strong>
+          <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
+            <i class="bi bi-chat-fill" aria-hidden="true"></i>
+            접수정보를 카카오톡에 공유
+          </button>
+          <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">카카오톡에서 공유할 채팅방을 선택해주세요.</p>
+        </div>
+        <div id="photo-file-share-step" class="kakao-share-action" hidden>
+          <strong><span>2</span> 실제 사진 파일 공유</strong>
+          <button id="photo-file-share" class="kakao-file-share-button" type="button" aria-describedby="photo-share-status" disabled>
+            <i class="bi bi-images" aria-hidden="true"></i>
+            사진 파일 공유
+          </button>
+          <p id="photo-share-status" class="kakao-share-status" role="status" aria-live="polite">1단계 완료 후 같은 채팅방에 사진 파일을 공유해주세요.</p>
+        </div>
         <button id="kakao-copy" class="kakao-copy-button" type="button"><i class="bi bi-copy" aria-hidden="true"></i> 공유 문구 복사</button>
       </section>
 
@@ -1332,7 +1365,8 @@
         retryingSubmission: false,
         reportNumbers: [],
         shareSnapshot: null,
-        kakaoShareStatus: "idle"
+        kakaoShareStatus: "idle",
+        photoShareStatus: "idle"
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1349,13 +1383,10 @@
       const submissionRetryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/retry";
       const submissionReceiptStorageKey = "kqms-qr-submission-receipt";
       const submissionStatusPollIntervalMs = 5000;
-      const publicFormUrl = "https://sy-1190.github.io/KQMS-QR-Scrap-Form/";
-      const newReportUrl = publicFormUrl;
       const kakaoJavaScriptKey = "02acbc681fd564246f01a527990c6d12";
       const kakaoSdkUrl = "https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js";
       const kakaoSdkScriptId = "kakao-javascript-sdk";
-      const kakaoTemplateIds = { 1: 136147, 2: 136148, 3: 136146 };
-      const kakaoMaxImageSize = 5 * 1024 * 1024;
+      const kakaoReceiptTemplateId = 136146;
       const maxPhotoSize = 10 * 1024 * 1024;
       let kakaoSdkPromise = null;
       const deliveryPresentation = {
@@ -1498,74 +1529,38 @@
         return kakao;
       }
 
-      async function prepareKakaoImage(file) {
-        if (file.size <= kakaoMaxImageSize) return file;
-        const imageUrl = URL.createObjectURL(file);
-        try {
-          const image = await new Promise((resolve, reject) => {
-            const element = new Image();
-            element.onload = () => resolve(element);
-            element.onerror = () => reject(new Error("공유할 사진을 변환하지 못했습니다."));
-            element.src = imageUrl;
-          });
-          const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-          const context = canvas.getContext("2d");
-          if (!context) throw new Error("공유할 사진을 변환하지 못했습니다.");
-          context.drawImage(image, 0, 0, canvas.width, canvas.height);
-          for (const quality of [0.88, 0.78, 0.68, 0.58]) {
-            const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
-            if (blob && blob.size <= kakaoMaxImageSize) {
-              return new File([blob], `${file.name.replace(/\.[^.]+$/, "") || "photo"}-kakao.jpg`, {
-                type: "image/jpeg",
-                lastModified: file.lastModified
-              });
-            }
-          }
-          throw new Error("사진을 카카오톡 공유 제한인 5MB 이하로 줄이지 못했습니다.");
-        } finally {
-          URL.revokeObjectURL(imageUrl);
-        }
-      }
-
       function setKakaoShareUi(status, message) {
         state.kakaoShareStatus = status;
         const button = $("kakao-share");
         button.disabled = status === "loading";
         button.innerHTML = status === "loading"
           ? '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 카카오톡 공유 준비 중'
-          : `<i class="bi bi-chat-fill" aria-hidden="true"></i> ${status === "opened" ? "채팅방 다시 선택" : status === "error" ? "카카오톡 공유 다시 시도" : "카카오톡 채팅방에 공유하기"}`;
+          : `<i class="bi bi-chat-fill" aria-hidden="true"></i> ${status === "opened" ? "접수정보 다시 공유" : status === "error" ? "카카오톡 공유 다시 시도" : "접수정보를 카카오톡에 공유"}`;
         $("kakao-share-status").textContent = message;
+        $("photo-file-share").disabled = status !== "opened" || state.photoShareStatus === "loading";
+      }
+
+      function setPhotoShareUi(status, message) {
+        state.photoShareStatus = status;
+        const button = $("photo-file-share");
+        button.disabled = state.kakaoShareStatus !== "opened" || status === "loading";
+        button.innerHTML = status === "loading"
+          ? '<i class="bi bi-arrow-repeat catalog-spinner" aria-hidden="true"></i> 사진 공유창 여는 중'
+          : `<i class="bi bi-images" aria-hidden="true"></i> ${status === "opened" ? "사진 파일 다시 공유" : `사진 파일 ${state.photos.length}장 공유`}`;
+        $("photo-share-status").textContent = message;
       }
 
       async function shareToKakao() {
-        const shareText = buildKakaoShareText();
-        const sharePhotos = state.photos.slice(0, 3);
-        setKakaoShareUi("loading", "접수정보와 사진을 카카오톡 공유용으로 준비하고 있습니다.");
+        setKakaoShareUi("loading", "접수정보를 카카오톡 공유용으로 준비하고 있습니다.");
         try {
           const kakao = await initializeKakaoSdk();
-          if (sharePhotos.length === 0) {
-            kakao.Share.sendDefault({
-              objectType: "text",
-              text: shareText,
-              link: { mobileWebUrl: newReportUrl, webUrl: newReportUrl },
-              buttonTitle: "추가 신고 접수"
-            });
-          } else {
-            const imageUrls = await Promise.all(sharePhotos.map(async (photo) => {
-              const prepared = await prepareKakaoImage(photo.file);
-              const response = await kakao.Share.uploadImage({ file: [prepared] });
-              const imageUrl = response.infos?.original?.url;
-              if (!imageUrl) throw new Error("카카오 이미지 주소를 받지 못했습니다.");
-              return imageUrl;
-            }));
-            const snapshot = state.shareSnapshot;
-            const submissionType = snapshot?.submissionType === "treasure_hunt" ? "보물찾기" : "자진신고";
-            const disposition = snapshot?.disposition === "scrap" ? "폐기" : "수정";
-            const partSummary = snapshot?.parts.map((part) => `${part.partNo} ${part.quantity}EA`).join(", ") || "-";
-            const templateArgs = {
+          const snapshot = state.shareSnapshot;
+          const submissionType = snapshot?.submissionType === "treasure_hunt" ? "보물찾기" : "자진신고";
+          const disposition = snapshot?.disposition === "scrap" ? "폐기" : "수정";
+          const partSummary = snapshot?.parts.map((part) => `${part.partNo} ${part.quantity}EA`).join(", ") || "-";
+          kakao.Share.sendCustom({
+            templateId: kakaoReceiptTemplateId,
+            templateArgs: {
               receipt_no: clipShareValue(state.reportNumbers.join(", ") || "접수 완료", 28),
               occurrence_date: snapshot?.occurrenceDate || "-",
               author: clipShareValue(snapshot?.author || "-", 20),
@@ -1575,18 +1570,38 @@
               process: clipShareValue(snapshot?.process || "-", 24),
               parts: clipShareValue(partSummary, 52),
               description: clipShareValue(snapshot?.description || "-", 58)
-            };
-            imageUrls.forEach((url, index) => { templateArgs[`IMG${index + 1}`] = url; });
-            kakao.Share.sendCustom({
-              templateId: kakaoTemplateIds[sharePhotos.length],
-              templateArgs
-            });
+            }
+          });
+          setKakaoShareUi("opened", "접수정보가 준비되었습니다. 채팅방을 선택해 전송해주세요.");
+          if (state.photos.length > 0) {
+            setPhotoShareUi("ready", `카카오톡에서 돌아온 뒤 같은 채팅방에 실제 사진 파일 ${state.photos.length}장을 공유해주세요.`);
           }
-          setKakaoShareUi("opened", sharePhotos.length > 0
-            ? `접수정보 텍스트와 현장 사진 ${sharePhotos.length}장이 준비되었습니다. 채팅방을 선택해 전송해주세요.`
-            : "접수정보가 준비되었습니다. 채팅방을 선택해 전송해주세요.");
         } catch {
           setKakaoShareUi("error", "카카오톡 공유를 준비하지 못했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
+        }
+      }
+
+      async function sharePhotoFiles() {
+        const shareFiles = state.photos.map((photo) => photo.file);
+        if (shareFiles.length === 0) return;
+        if (state.kakaoShareStatus !== "opened") {
+          setPhotoShareUi("error", "먼저 1단계에서 접수정보를 카카오톡 채팅방에 공유해주세요.");
+          return;
+        }
+        if (!navigator.share || typeof navigator.canShare !== "function" || !navigator.canShare({ files: shareFiles })) {
+          setPhotoShareUi("error", "이 휴대폰에서는 사진 파일 공유를 지원하지 않습니다.");
+          return;
+        }
+        setPhotoShareUi("loading", "사진 파일 공유창을 여는 중입니다.");
+        try {
+          await navigator.share({ title: "KQMS 공정부적합 현장 사진", files: shareFiles });
+          setPhotoShareUi("opened", `실제 사진 파일 ${shareFiles.length}장을 공유했습니다.`);
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            setPhotoShareUi("ready", "사진 공유가 취소되었습니다. 같은 채팅방을 다시 선택해주세요.");
+            return;
+          }
+          setPhotoShareUi("error", "사진 파일 공유창을 열지 못했습니다. 다시 시도해주세요.");
         }
       }
 
@@ -1632,8 +1647,12 @@
         $("retry-submission").hidden = result.status !== "failed";
         $("restart").hidden = !["completed", "failed"].includes(result.status);
         $("kakao-share-panel").hidden = result.status !== "completed";
+        $("photo-file-share-step").hidden = state.photos.length === 0;
         if (result.status === "completed" && state.kakaoShareStatus === "idle") {
           setKakaoShareUi("ready", "카카오톡에서 공유할 채팅방을 선택해주세요.");
+          if (state.photos.length > 0) {
+            setPhotoShareUi("idle", "1단계 완료 후 같은 채팅방에 사진 파일을 공유해주세요.");
+          }
         }
         $("back").classList.toggle("is-invisible", !["completed", "failed"].includes(result.status));
         if (["completed", "failed"].includes(result.status)) stopStatusPolling();
@@ -2586,6 +2605,7 @@
         state.reportNumbers = [];
         state.shareSnapshot = null;
         state.kakaoShareStatus = "idle";
+        state.photoShareStatus = "idle";
         $("part-query").value = "";
         $("part-query").disabled = false;
         $("part-results").replaceChildren();
@@ -2733,6 +2753,8 @@
       $("retry-submission").addEventListener("click", retrySubmission);
 
       $("kakao-share").addEventListener("click", shareToKakao);
+
+      $("photo-file-share").addEventListener("click", sharePhotoFiles);
 
       $("kakao-copy").addEventListener("click", copyKakaoShareText);
 
