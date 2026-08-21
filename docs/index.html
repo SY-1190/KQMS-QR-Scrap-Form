@@ -1522,8 +1522,7 @@
           const historyUrl = `${recentHistoryPageUrl}#access=${encodeURIComponent(tokenResult.token)}`;
           const shareData = {
             title: "KQMS 공정부적합 접수 완료",
-            text: `${buildKakaoShareText()}\n\n최근 7일 접수 현황`,
-            url: historyUrl
+            text: `${buildKakaoShareText()}\n\n최근 7일 접수 현황\n${historyUrl}`
           };
           if (shareFiles.length > 0) shareData.files = shareFiles;
           await navigator.share(shareData);
