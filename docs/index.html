@@ -27,10 +27,11 @@
     }
 
     * { box-sizing: border-box; }
-    html { min-height: 100%; background: var(--canvas); scroll-behavior: smooth; }
+    html { min-height: 100%; background: var(--canvas); scroll-behavior: smooth; overscroll-behavior-y: none; }
     body {
       min-height: 100%;
       margin: 0;
+      overscroll-behavior-y: none;
       color: var(--ink);
       background:
         radial-gradient(circle at 50% -8%, rgba(24, 96, 226, .1), transparent 32rem),
