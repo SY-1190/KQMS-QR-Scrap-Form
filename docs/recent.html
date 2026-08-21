@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b4ec7">
+  <meta name="referrer" content="no-referrer">
+  <title>KQMS 최근 7일 접수 현황</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root { --ink:#111c2d; --muted:#667085; --line:#d7dfed; --blue:#0b4ec7; --blue-dark:#073b98; --blue-soft:#e9f0ff; --green:#19763a; --red:#b42318; }
+    * { box-sizing:border-box; }
+    html { min-height:100%; background:#f5f7fc; overscroll-behavior-y:none; }
+    body { min-height:100%; margin:0; overscroll-behavior-y:none; color:var(--ink); background:radial-gradient(circle at 50% -8%,rgba(24,96,226,.1),transparent 32rem),#f5f7fc; font-family:Pretendard,"Noto Sans KR","Malgun Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+    button { font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .shell { width:min(100%,760px); min-height:100dvh; margin:0 auto; padding:0 18px 40px; background:rgba(249,250,255,.96); box-shadow:0 0 0 1px rgba(111,129,166,.08); }
+    header { display:flex; align-items:center; gap:13px; margin:0 -18px; padding:20px 20px 18px; color:#fff; background:linear-gradient(135deg,#073b98,#0b5bd3); }
+    .mark { display:grid; flex:0 0 auto; width:46px; height:46px; place-items:center; border:1px solid rgba(255,255,255,.3); border-radius:14px; background:rgba(255,255,255,.14); font-size:22px; }
+    header p,header h1 { margin:0; } header p { margin-bottom:3px; color:rgba(255,255,255,.72); font-size:10px; font-weight:800; letter-spacing:.09em; } header h1 { font-size:clamp(21px,5vw,27px); letter-spacing:-.04em; }
+    .summary { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(21,49,105,.08); }
+    .summary-info { display:grid; min-width:0; grid-template-columns:auto 1fr; align-items:center; column-gap:8px; }
+    .summary strong { font-size:14px; line-height:1.45; } .summary small { grid-column:2; margin-top:4px; color:var(--muted); font-size:11px; }
+    .dot { width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 0 5px #e5f5e9; } .dot.loading { background:var(--blue); box-shadow:0 0 0 5px var(--blue-soft); } .dot.error { background:var(--red); box-shadow:0 0 0 5px #fee4e2; }
+    .refresh { display:inline-flex; flex:0 0 auto; align-items:center; gap:6px; min-height:40px; padding:0 12px; border:1px solid #b9c9e7; border-radius:11px; color:var(--blue); background:var(--blue-soft); font-size:13px; font-weight:800; transition:transform 160ms ease; } .refresh:active { transform:scale(.97); } .refresh:disabled { cursor:wait; opacity:.58; }
+    .privacy { display:flex; align-items:flex-start; gap:7px; margin:12px 2px 16px; color:var(--muted); font-size:12px; line-height:1.55; } .privacy i { margin-top:1px; color:var(--green); }
+    .list { display:grid; gap:12px; }
+    .card { overflow:hidden; border:1px solid var(--line); border-radius:16px; background:#fff; box-shadow:0 6px 20px rgba(21,49,105,.06); animation:enter 260ms ease both; }
+    .card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 16px 13px; border-bottom:1px solid #e8edf6; background:linear-gradient(180deg,#f8fbff,#fff); } .card-head small { color:var(--muted); font-size:11px; font-weight:700; } .card-head h2 { overflow-wrap:anywhere; margin:3px 0 0; color:var(--blue-dark); font-size:17px; letter-spacing:-.025em; }
+    .badge { flex:0 0 auto; padding:5px 9px; border-radius:999px; color:var(--blue-dark); background:var(--blue-soft); font-size:12px; font-weight:800; }
+    dl { display:grid; gap:10px; margin:0; padding:14px 16px 16px; } dl>div { display:grid; grid-template-columns:86px minmax(0,1fr); gap:10px; align-items:start; } dt { color:var(--muted); font-size:12px; } dd { min-width:0; margin:0; font-size:13px; font-weight:700; line-height:1.5; overflow-wrap:anywhere; }
+    .parts { display:flex; flex-wrap:wrap; gap:6px; } .parts span { padding:5px 8px; border:1px solid #d5e1f6; border-radius:8px; color:#243653; background:#f7faff; font-size:12px; } .unavailable { color:var(--muted); font-weight:500; }
+    .empty { display:grid; justify-items:center; padding:48px 22px; border:1px dashed #c6d2e7; border-radius:16px; color:var(--muted); background:rgba(255,255,255,.68); text-align:center; } .empty i { margin-bottom:10px; color:var(--blue); font-size:30px; } .empty.error i { color:var(--red); } .empty strong { color:var(--ink); font-size:15px; } .empty p { margin:6px 0 0; font-size:12px; line-height:1.55; }
+    .spin { animation:spin .8s linear infinite; } @keyframes spin { to { transform:rotate(360deg); } } @keyframes enter { from { opacity:0; transform:translateY(8px); } }
+    @media(max-width:480px) { .summary { align-items:stretch; flex-direction:column; } .refresh { justify-content:center; width:100%; } }
+    @media(prefers-reduced-motion:reduce) { * { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <span class="mark"><i class="bi bi-clipboard2-check-fill" aria-hidden="true"></i></span>
+      <div><p>KQMS PROCESS NONCONFORMANCE</p><h1>최근 7일 접수 현황</h1></div>
+    </header>
+    <section class="summary" aria-live="polite">
+      <div class="summary-info"><span id="status-dot" class="dot loading" aria-hidden="true"></span><strong id="status-message">최근 7일 접수 현황을 불러오고 있습니다.</strong><small id="as-of">조회 시점 기준 최근 7일 · 최대 100건</small></div>
+      <button id="refresh" class="refresh" type="button" disabled><i class="bi bi-arrow-clockwise spin" aria-hidden="true"></i> 새로고침</button>
+    </section>
+    <p class="privacy"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> 작성자·부서·발생 상세내용·사진은 이 목록에 표시하지 않습니다.</p>
+    <section id="list" class="list" aria-label="최근 완료 접수 목록"></section>
+    <section id="empty" class="empty" hidden><i class="bi bi-inbox" aria-hidden="true"></i><strong>완료 접수가 없습니다</strong><p>새 접수가 KQMS에 완료되면 이곳에 표시됩니다.</p></section>
+  </main>
+  <script>
+    (() => {
+      const recentHistoryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/recent";
+      const fragment = new URLSearchParams(location.hash.replace(/^#/, ""));
+      const accessToken = fragment.get("access")?.trim() || "";
+      history.replaceState({}, "", `${location.pathname}${location.search}`);
+      const $ = (id) => document.getElementById(id);
+
+      function formatKoreanDateTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "-";
+        return new Intl.DateTimeFormat("ko-KR", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hour12:false }).format(date);
+      }
+
+      function setStatus(status, message, asOf = "") {
+        $("status-dot").className = `dot ${status}`;
+        $("status-message").textContent = message;
+        $("as-of").textContent = asOf ? `조회 기준 ${formatKoreanDateTime(asOf)}` : "조회 시점 기준 최근 7일 · 최대 100건";
+        $("refresh").disabled = !accessToken || status === "loading";
+        $("refresh").querySelector("i").classList.toggle("spin", status === "loading");
+      }
+
+      function addDefinition(list, label, value, className = "") {
+        const row = document.createElement("div");
+        const term = document.createElement("dt");
+        const description = document.createElement("dd");
+        term.textContent = label;
+        description.textContent = value;
+        if (className) description.className = className;
+        row.append(term, description);
+        list.append(row);
+        return description;
+      }
+
+      function render(items) {
+        const list = $("list");
+        const empty = $("empty");
+        list.replaceChildren();
+        empty.hidden = items.length > 0;
+        if (items.length === 0) {
+          empty.className = "empty";
+          empty.querySelector("i").className = "bi bi-inbox";
+          empty.querySelector("strong").textContent = "완료 접수가 없습니다";
+          empty.querySelector("p").textContent = "새 접수가 KQMS에 완료되면 이곳에 표시됩니다.";
+          return;
+        }
+        items.forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "card";
+          const head = document.createElement("div");
+          head.className = "card-head";
+          const titleWrap = document.createElement("div");
+          const label = document.createElement("small");
+          label.textContent = "접수번호";
+          const title = document.createElement("h2");
+          title.textContent = item.reportNumbers?.join(", ") || "KQMS 접수 완료";
+          titleWrap.append(label, title);
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = item.disposition === "scrap" ? "폐기" : item.disposition === "repair" ? "수정" : "완료";
+          head.append(titleWrap, badge);
+          const details = document.createElement("dl");
+          addDefinition(details, "접수 완료", formatKoreanDateTime(item.completedAt));
+          if (item.detailsAvailable) {
+            addDefinition(details, "발생일", item.occurrenceDate || "-");
+            addDefinition(details, "발생 공정", item.process || "-");
+            const parts = addDefinition(details, "품번·수량", "", "parts");
+            (item.parts || []).forEach((part) => {
+              const partTag = document.createElement("span");
+              partTag.textContent = `${part.partNo} · ${part.quantity}EA`;
+              parts.append(partTag);
+            });
+          } else {
+            addDefinition(details, "접수 정보", "최근 목록 적용 전 완료 건으로 상세 요약이 없습니다.", "unavailable");
+          }
+          card.append(head, details);
+          list.append(card);
+        });
+      }
+
+      function showError(message) {
+        render([]);
+        const empty = $("empty");
+        empty.hidden = false;
+        empty.className = "empty error";
+        empty.querySelector("i").className = "bi bi-exclamation-circle";
+        empty.querySelector("strong").textContent = "목록을 확인할 수 없습니다";
+        empty.querySelector("p").textContent = "공유 메시지의 버튼으로 다시 열거나 잠시 후 새로고침해주세요.";
+        setStatus("error", message);
+      }
+
+      async function loadRecent() {
+        if (!accessToken) {
+          showError("최근 접수 조회 주소가 올바르지 않습니다. 카카오톡 공유 메시지의 버튼으로 다시 열어주세요.");
+          return;
+        }
+        setStatus("loading", "버튼을 누른 시점의 최근 7일 접수 현황을 불러오고 있습니다.");
+        try {
+          const response = await fetch(recentHistoryUrl, { method:"POST", headers:{ accept:"application/json", authorization:`Bearer ${accessToken}` }, cache:"no-store" });
+          const result = await response.json();
+          if (!response.ok || result.ok !== true || !Array.isArray(result.items) || !result.asOf) throw new Error(result.message || "최근 접수 현황을 불러오지 못했습니다.");
+          render(result.items);
+          setStatus("ready", result.items.length > 0 ? `최근 7일 완료 접수 ${result.items.length}건입니다.` : "최근 7일 동안 완료된 접수가 없습니다.", result.asOf);
+        } catch (error) {
+          showError(error instanceof Error ? error.message : "최근 접수 현황을 불러오지 못했습니다.");
+        }
+      }
+
+      $("refresh").addEventListener("click", loadRecent);
+      void loadRecent();
+    })();
+  </script>
+</body>
+</html>
