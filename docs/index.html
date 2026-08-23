@@ -1248,14 +1248,14 @@
       <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
         <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>마지막 1단계</span></div>
         <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
-        <p>한 번의 채팅방 선택으로 접수정보, 최근 7일 접수 현황 링크와 실제 사진 파일 최대 3장을 함께 공유합니다.</p>
+        <p>사진 없이 접수정보 템플릿과 최근 7일 접수 현황 버튼을 공유합니다.</p>
         <div class="kakao-share-action">
-          <strong><span>1</span> 접수정보·사진 한 번에 공유</strong>
+          <strong><span>1</span> 접수정보 템플릿 공유</strong>
           <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
             <i class="bi bi-chat-fill" aria-hidden="true"></i>
             카카오톡 채팅방에 공유하기
           </button>
-          <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">카카오톡에서 공유할 채팅방을 선택해주세요.</p>
+          <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">사진 없이 접수정보를 공유할 채팅방을 선택해주세요.</p>
         </div>
         <button id="kakao-copy" class="kakao-copy-button" type="button"><i class="bi bi-copy" aria-hidden="true"></i> 공유 문구 복사</button>
       </section>
@@ -1374,10 +1374,14 @@
       const submissionStatusUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/status";
       const submissionRetryUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/retry";
       const recentHistoryTokenUrl = "https://kqms-qr-relay-private.iiosii.workers.dev/api/submissions/recent/token";
-      const recentHistoryPageUrl = "https://sy-1190.github.io/KQMS-QR-Scrap-Form/recent.html";
       const submissionReceiptStorageKey = "kqms-qr-submission-receipt";
       const submissionStatusPollIntervalMs = 5000;
+      const kakaoJavaScriptKey = "02acbc681fd564246f01a527990c6d12";
+      const kakaoSdkUrl = "https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js";
+      const kakaoSdkScriptId = "kakao-javascript-sdk";
+      const kakaoReceiptTemplateId = 136146;
       const maxPhotoSize = 10 * 1024 * 1024;
+      let kakaoSdkPromise = null;
       const deliveryPresentation = {
         queued: { icon: "bi-hourglass-split", eyebrow: "WAITING FOR KQMS", title: "KQMS 전송을 기다리고 있습니다", badge: "전송 대기" },
         processing: { icon: "bi-arrow-repeat", eyebrow: "SENDING TO KQMS", title: "KQMS에 접수하고 있습니다", badge: "접수 중" },
@@ -1490,6 +1494,36 @@
         return lines.join("\n");
       }
 
+      function loadKakaoSdk() {
+        if (window.Kakao) return Promise.resolve(window.Kakao);
+        if (kakaoSdkPromise) return kakaoSdkPromise;
+        kakaoSdkPromise = new Promise((resolve, reject) => {
+          document.getElementById(kakaoSdkScriptId)?.remove();
+          const script = document.createElement("script");
+          script.id = kakaoSdkScriptId;
+          script.src = kakaoSdkUrl;
+          script.async = true;
+          script.onload = () => window.Kakao
+            ? resolve(window.Kakao)
+            : reject(new Error("카카오 SDK를 초기화하지 못했습니다."));
+          script.onerror = () => {
+            script.remove();
+            reject(new Error("카카오 공유 기능을 불러오지 못했습니다."));
+          };
+          document.head.append(script);
+        }).catch((error) => {
+          kakaoSdkPromise = null;
+          throw error;
+        });
+        return kakaoSdkPromise;
+      }
+
+      async function initializeKakaoSdk() {
+        const kakao = await loadKakaoSdk();
+        if (!kakao.isInitialized()) kakao.init(kakaoJavaScriptKey);
+        return kakao;
+      }
+
       function setKakaoShareUi(status, message) {
         state.kakaoShareStatus = status;
         const button = $("kakao-share");
@@ -1501,8 +1535,7 @@
       }
 
       async function shareToKakao() {
-        const shareFiles = state.photos.slice(0, 3).map((photo) => photo.file);
-        setKakaoShareUi("loading", "접수정보·최근 7일 현황·사진을 한 번에 준비하고 있습니다.");
+        setKakaoShareUi("loading", "사진 없이 접수정보 템플릿을 준비하고 있습니다.");
         try {
           const tokenResponse = await fetch(recentHistoryTokenUrl, {
             method: "POST",
@@ -1513,27 +1546,28 @@
           if (!tokenResponse.ok || tokenResult.ok !== true || !tokenResult.token) {
             throw new Error(tokenResult.message || "최근 접수 현황 조회 주소를 만들지 못했습니다.");
           }
-          if (!navigator.share) {
-            throw new Error("이 브라우저에서는 사진과 접수정보 동시 공유를 지원하지 않습니다.");
-          }
-          if (shareFiles.length > 0 && (typeof navigator.canShare !== "function" || !navigator.canShare({ files: shareFiles }))) {
-            throw new Error("이 휴대폰에서는 사진 파일 동시 공유를 지원하지 않습니다.");
-          }
-          const historyUrl = `${recentHistoryPageUrl}#access=${encodeURIComponent(tokenResult.token)}`;
-          const shareData = {
-            title: "KQMS 공정부적합 접수 완료",
-            text: `${buildKakaoShareText()}\n\n최근 7일 접수 현황\n${historyUrl}`
-          };
-          if (shareFiles.length > 0) shareData.files = shareFiles;
-          await navigator.share(shareData);
-          setKakaoShareUi("opened", shareFiles.length > 0
-            ? `접수정보와 실제 사진 ${shareFiles.length}장을 한 번에 공유했습니다.${state.photos.length > 3 ? " 나머지 사진은 KQMS에만 저장됩니다." : ""}`
-            : "접수정보와 최근 7일 접수 현황을 공유했습니다.");
+          const kakao = await initializeKakaoSdk();
+          const snapshot = state.shareSnapshot;
+          const submissionType = snapshot?.submissionType === "treasure_hunt" ? "보물찾기" : "자진신고";
+          const disposition = snapshot?.disposition === "scrap" ? "폐기" : "수정";
+          const partSummary = snapshot?.parts.map((part) => `${part.partNo} ${part.quantity}EA`).join(", ") || "-";
+          kakao.Share.sendCustom({
+            templateId: kakaoReceiptTemplateId,
+            templateArgs: {
+              receipt_no: clipShareValue(state.reportNumbers.join(", ") || "접수 완료", 28),
+              occurrence_date: snapshot?.occurrenceDate || "-",
+              author: clipShareValue(snapshot?.author || "-", 20),
+              department: clipShareValue(snapshot?.teamDepartment || "-", 22),
+              submission_type: submissionType,
+              disposition,
+              process: clipShareValue(snapshot?.process || "-", 24),
+              parts: clipShareValue(partSummary, 52),
+              description: clipShareValue(snapshot?.description || "-", 58),
+              HISTORY_TOKEN: tokenResult.token
+            }
+          });
+          setKakaoShareUi("opened", "접수정보 템플릿이 준비되었습니다. 채팅방을 선택해 전송해주세요.");
         } catch (error) {
-          if (error instanceof DOMException && error.name === "AbortError") {
-            setKakaoShareUi("ready", "공유가 취소되었습니다. 버튼을 눌러 카카오톡을 다시 선택해주세요.");
-            return;
-          }
           setKakaoShareUi("error", error instanceof Error
             ? error.message
             : "카카오톡 공유를 준비하지 못했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
@@ -1583,7 +1617,7 @@
         $("restart").hidden = !["completed", "failed"].includes(result.status);
         $("kakao-share-panel").hidden = result.status !== "completed";
         if (result.status === "completed" && state.kakaoShareStatus === "idle") {
-          setKakaoShareUi("ready", "카카오톡에서 공유할 채팅방을 선택해주세요.");
+          setKakaoShareUi("ready", "사진 없이 접수정보를 공유할 채팅방을 선택해주세요.");
         }
         $("back").classList.toggle("is-invisible", !["completed", "failed"].includes(result.status));
         if (["completed", "failed"].includes(result.status)) stopStatusPolling();
