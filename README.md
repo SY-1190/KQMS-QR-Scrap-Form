@@ -1,10 +1,10 @@
-# KQMS 공정부적합 신고 · 공개 테스트
+# KQMS 공정부적합 신고
 
-QR 스캔으로 시작하는 모바일 공정부적합 신고 Form의 공개 사용자 흐름 테스트입니다.
+QR 스캔으로 시작하는 모바일 공정부적합 신고 운영 Form입니다.
 
-공개 테스트 사이트: https://sy-1190.github.io/KQMS-QR-Scrap-Form/
+운영 사이트: https://sy-1190.github.io/KQMS-QR-Scrap-Form/
 
-## 공개 테스트 범위
+## 운영 범위
 
 - 비공개로 발급된 현장 운영 QR 촬영 및 Cloudflare 사람 확인을 통과한 경우에만 Form 진입
 - QR 검증 후 10분 동안 유효한 1회성 접수권 발급
