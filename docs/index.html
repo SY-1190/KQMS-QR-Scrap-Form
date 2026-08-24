@@ -729,7 +729,7 @@
     .sticky > * { flex: 1; }
 
     .photo-panel { padding: 16px; }
-    .photo-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .photo-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
     .upload {
       display: grid;
       min-height: 132px;
@@ -1181,25 +1181,19 @@
       <div class="intro">
         <p class="eyebrow">STEP 3 · PHOTO & REVIEW</p>
         <h1>사진 첨부 및 최종 확인</h1>
-        <p>공정부적합 현장 사진을 첨부하고 입력 내용을 확인해주세요.</p>
+        <p>휴대폰 기본 카메라로 현장 사진을 촬영해 갤러리에 저장한 뒤 아래에서 선택해주세요.</p>
       </div>
 
       <div class="photo-panel">
         <div class="photo-actions">
           <label class="upload">
-            <i class="bi bi-camera" aria-hidden="true"></i>
-            <span>카메라 촬영</span>
-            <small>현장에서 사진 촬영</small>
-            <input id="camera-photos" aria-label="카메라 촬영" type="file" accept="image/*" capture="environment">
-          </label>
-          <label class="upload">
             <i class="bi bi-images" aria-hidden="true"></i>
-            <span>갤러리에서 선택</span>
-            <small>휴대폰에 저장된 사진 선택</small>
+            <span>갤러리 사진 선택</span>
+            <small>기본 카메라로 촬영해 저장한 사진을 선택해주세요</small>
             <input id="gallery-photos" aria-label="갤러리에서 선택" type="file" accept="image/*" multiple>
           </label>
         </div>
-        <small class="photo-limit">합계 최대 5장 · 사진 한 장 최대 10MB</small>
+        <small class="photo-limit">최대 5장 · 사진 한 장 최대 10MB</small>
         <div id="photo-grid" class="photos"></div>
         <div id="photo-empty" class="empty-photo"><i class="bi bi-images" aria-hidden="true"></i> 첨부된 사진이 없습니다.</div>
       </div>
@@ -1246,9 +1240,9 @@
       <p id="duplicate-validation-note" class="status-note" role="status" hidden>동일한 제출 요청의 기존 처리 상태를 표시합니다.</p>
 
       <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
-        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>마지막 1단계</span></div>
+        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>공유 2단계</span></div>
         <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
-        <p>사진 없이 접수정보 템플릿과 최근 7일 접수 현황 버튼을 공유합니다.</p>
+        <p>접수정보 템플릿을 공유한 뒤 같은 채팅방에서 갤러리 사진을 직접 첨부해주세요.</p>
         <div class="kakao-share-action">
           <strong><span>1</span> 접수정보 템플릿 공유</strong>
           <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
@@ -1256,6 +1250,10 @@
             카카오톡 채팅방에 공유하기
           </button>
           <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">사진 없이 접수정보를 공유할 채팅방을 선택해주세요.</p>
+        </div>
+        <div class="kakao-share-action">
+          <strong><span>2</span> 같은 채팅방에 사진 직접 첨부</strong>
+          <p class="kakao-share-status">템플릿 전송 후 열린 채팅방에서 + → 앨범을 눌러 갤러리 사진을 선택해 전송해주세요.</p>
         </div>
         <button id="kakao-copy" class="kakao-copy-button" type="button"><i class="bi bi-copy" aria-hidden="true"></i> 공유 문구 복사</button>
       </section>
@@ -2707,7 +2705,6 @@
         refreshSummary();
       }
 
-      $("camera-photos").addEventListener("change", addPhotos);
       $("gallery-photos").addEventListener("change", addPhotos);
 
       $("edit").addEventListener("click", () => setStep(1));
