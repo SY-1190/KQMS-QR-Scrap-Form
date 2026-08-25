@@ -834,12 +834,8 @@
       text-align: left;
     }
     .kakao-share-step { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; color: #4a4200; font-size: 11px; font-weight: 900; }
-    .kakao-share-step span { margin-left: auto; padding: 5px 8px; border-radius: 999px; color: #191600; background: #fee500; }
     .kakao-share-panel h2 { margin: 0; color: #191919; font-size: 19px; line-height: 1.35; }
     .kakao-share-panel > p { margin: 8px 0 16px; color: #645b19; font-size: 12px; line-height: 1.55; }
-    .kakao-share-action + .kakao-share-action { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(100, 91, 25, .18); }
-    .kakao-share-action > strong { display: flex; margin-bottom: 9px; align-items: center; gap: 8px; color: #3d3700; font-size: 12px; }
-    .kakao-share-action > strong span { display: grid; width: 22px; height: 22px; border-radius: 50%; color: #191919; background: #fee500; font-size: 11px; place-items: center; }
     .kakao-share-button {
       display: flex;
       width: 100%;
@@ -859,29 +855,9 @@
     .kakao-share-button i { font-size: 20px; }
     .kakao-share-button:active { transform: scale(.97); }
     .kakao-share-button:disabled { cursor: wait; opacity: .72; }
-    .kakao-file-share-button {
-      display: flex;
-      width: 100%;
-      min-height: 54px;
-      align-items: center;
-      justify-content: center;
-      gap: 9px;
-      border: 1px solid #9db8df;
-      border-radius: 12px;
-      color: var(--blue);
-      background: #fff;
-      box-shadow: 0 6px 14px rgba(11, 78, 199, .1);
-      font-size: 14px;
-      font-weight: 900;
-      transition: transform 140ms cubic-bezier(.23, 1, .32, 1), box-shadow 180ms ease;
-    }
-    .kakao-file-share-button:active { transform: scale(.97); }
-    .kakao-file-share-button:disabled { cursor: not-allowed; opacity: .52; }
     .kakao-share-panel .kakao-share-status { margin: 11px 0 0; color: #514900; font-size: 11px; font-weight: 800; text-align: center; }
-    .kakao-copy-button { display: flex; margin: 11px auto 0; align-items: center; gap: 6px; border: 0; color: #5d551b; background: transparent; font-size: 11px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
     @media (hover: hover) and (pointer: fine) {
       .kakao-share-button:hover:not(:disabled) { box-shadow: 0 9px 20px rgba(99, 85, 0, .23); transform: translateY(-1px); }
-      .kakao-file-share-button:hover:not(:disabled) { box-shadow: 0 8px 18px rgba(11, 78, 199, .16); transform: translateY(-1px); }
     }
     .receipt { text-align: left; }
     .receipt-title {
@@ -1228,22 +1204,16 @@
       <p id="duplicate-validation-note" class="status-note" role="status" hidden>동일한 제출 요청의 기존 처리 상태를 표시합니다.</p>
 
       <section id="kakao-share-panel" class="kakao-share-panel" aria-labelledby="kakao-share-title" hidden>
-        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료 <span>공유 2단계</span></div>
-        <h2 id="kakao-share-title">접수 내용을 채팅방에 꼭 공유해주세요</h2>
-        <p>접수정보 템플릿을 공유한 뒤 같은 채팅방에서 갤러리 사진을 직접 첨부해주세요.</p>
+        <div class="kakao-share-step"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 접수 완료</div>
+        <h2 id="kakao-share-title">접수정보를 카카오톡에 공유해주세요</h2>
+        <p>채팅방을 선택하면 접수정보 템플릿만 전송됩니다.</p>
         <div class="kakao-share-action">
-          <strong><span>1</span> 접수정보 템플릿 공유</strong>
           <button id="kakao-share" class="kakao-share-button" type="button" aria-describedby="kakao-share-status">
             <i class="bi bi-chat-fill" aria-hidden="true"></i>
             카카오톡 채팅방에 공유하기
           </button>
-          <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">사진 없이 접수정보를 공유할 채팅방을 선택해주세요.</p>
+          <p id="kakao-share-status" class="kakao-share-status" role="status" aria-live="polite">접수정보 템플릿을 공유할 채팅방을 선택해주세요.</p>
         </div>
-        <div class="kakao-share-action">
-          <strong><span>2</span> 같은 채팅방에 사진 직접 첨부</strong>
-          <p class="kakao-share-status">템플릿 전송 후 열린 채팅방에서 + → 앨범을 눌러 갤러리 사진을 선택해 전송해주세요.</p>
-        </div>
-        <button id="kakao-copy" class="kakao-copy-button" type="button"><i class="bi bi-copy" aria-hidden="true"></i> 공유 문구 복사</button>
       </section>
 
       <div class="receipt">
@@ -1451,35 +1421,6 @@
         };
       }
 
-      function buildKakaoShareText() {
-        const snapshot = state.shareSnapshot;
-        const submissionType = snapshot?.submissionType === "treasure_hunt" ? "보물찾기" : "자진신고";
-        const disposition = snapshot?.disposition === "scrap" ? "폐기" : "수정";
-        const partSummary = snapshot?.parts.map((part) => `${part.partNo} ${part.quantity}EA`).join(", ") || "-";
-        const candidates = [
-          "[KQMS 공정부적합 접수 완료]",
-          `접수번호: ${clipShareValue(state.reportNumbers.join(", ") || "접수 완료", 28)}`,
-          ...(snapshot ? [
-            `발생일: ${snapshot.occurrenceDate || "-"}`,
-            `작성자: ${clipShareValue(snapshot.author, 20)}`,
-            `부서: ${clipShareValue(snapshot.teamDepartment, 22)}`,
-            `신고분류: ${submissionType}`,
-            `처리구분: ${disposition}`,
-            `발생공정: ${clipShareValue(snapshot.process, 18)}`,
-            `품번: ${clipShareValue(partSummary, 34)}`,
-            `발생현상: ${clipShareValue(snapshot.description, 34)}`
-          ] : [])
-        ];
-        const lines = [];
-        for (const candidate of candidates) {
-          const remaining = 200 - lines.join("\n").length - (lines.length > 0 ? 1 : 0);
-          if (remaining <= 0) break;
-          lines.push(clipShareValue(candidate, remaining));
-          if (candidate.length > remaining) break;
-        }
-        return lines.join("\n");
-      }
-
       function loadKakaoSdk() {
         if (window.Kakao) return Promise.resolve(window.Kakao);
         if (kakaoSdkPromise) return kakaoSdkPromise;
@@ -1521,7 +1462,7 @@
       }
 
       async function shareToKakao() {
-        setKakaoShareUi("loading", "사진 없이 접수정보 템플릿을 준비하고 있습니다.");
+        setKakaoShareUi("loading", "접수정보 템플릿을 준비하고 있습니다.");
         try {
           const tokenResponse = await fetch(recentHistoryTokenUrl, {
             method: "POST",
@@ -1556,16 +1497,7 @@
         } catch (error) {
           setKakaoShareUi("error", error instanceof Error
             ? error.message
-            : "카카오톡 공유를 준비하지 못했습니다. 다시 시도하거나 공유 문구를 복사해주세요.");
-        }
-      }
-
-      async function copyKakaoShareText() {
-        try {
-          await navigator.clipboard.writeText(buildKakaoShareText());
-          $("kakao-share-status").textContent = "공유 문구를 복사했습니다. 카카오톡 채팅방에 붙여넣어주세요.";
-        } catch {
-          $("kakao-share-status").textContent = "공유 문구를 복사하지 못했습니다. 카카오톡 공유를 다시 시도해주세요.";
+            : "카카오톡 공유를 준비하지 못했습니다. 다시 시도해주세요.");
         }
       }
 
@@ -1603,7 +1535,7 @@
         $("restart").hidden = !["completed", "failed"].includes(result.status);
         $("kakao-share-panel").hidden = result.status !== "completed";
         if (result.status === "completed" && state.kakaoShareStatus === "idle") {
-          setKakaoShareUi("ready", "사진 없이 접수정보를 공유할 채팅방을 선택해주세요.");
+          setKakaoShareUi("ready", "접수정보 템플릿을 공유할 채팅방을 선택해주세요.");
         }
         $("back").classList.toggle("is-invisible", !["completed", "failed"].includes(result.status));
         if (["completed", "failed"].includes(result.status)) stopStatusPolling();
@@ -2702,8 +2634,6 @@
       $("retry-submission").addEventListener("click", retrySubmission);
 
       $("kakao-share").addEventListener("click", shareToKakao);
-
-      $("kakao-copy").addEventListener("click", copyKakaoShareText);
 
       $("restart").addEventListener("click", reset);
 
