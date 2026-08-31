@@ -1157,7 +1157,7 @@
             <input id="gallery-photos" aria-label="갤러리에서 선택" type="file" accept="image/*" multiple>
           </label>
         </div>
-        <small class="photo-limit">최대 5장 · 사진 한 장 최대 10MB</small>
+        <small class="photo-limit">최대 5장 · 원본 한 장 10MB 이하 · 전송 전 자동 압축</small>
         <div id="photo-grid" class="photos"></div>
         <div id="photo-empty" class="empty-photo"><i class="bi bi-images" aria-hidden="true"></i> 첨부된 사진이 없습니다.</div>
       </div>
@@ -1337,6 +1337,15 @@
       const kakaoSdkScriptId = "kakao-javascript-sdk";
       const kakaoReceiptTemplateId = 136146;
       const maxPhotoSize = 10 * 1024 * 1024;
+      const maxCompressedPhotoDimension = 1920;
+      const targetCompressedPhotoSize = 2 * 1024 * 1024;
+      const photoCompressionAttempts = [
+        { maxDimension: maxCompressedPhotoDimension, quality: 0.82 },
+        { maxDimension: maxCompressedPhotoDimension, quality: 0.72 },
+        { maxDimension: maxCompressedPhotoDimension, quality: 0.62 },
+        { maxDimension: 1600, quality: 0.72 },
+        { maxDimension: 1280, quality: 0.68 }
+      ];
       let kakaoSdkPromise = null;
       const deliveryPresentation = {
         queued: { icon: "bi-hourglass-split", eyebrow: "WAITING FOR KQMS", title: "KQMS 전송을 기다리고 있습니다", badge: "전송 대기" },
@@ -1361,6 +1370,57 @@
           reader.onerror = () => reject(new Error("사진 파일을 읽지 못했습니다."));
           reader.readAsDataURL(file);
         });
+      }
+
+      function compressedPhotoName(fileName) {
+        const extensionIndex = fileName.lastIndexOf(".");
+        const baseName = extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName;
+        return `${baseName || "photo"}.jpg`;
+      }
+
+      function canvasAsJpeg(canvas, quality) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("사진을 JPEG로 변환하지 못했습니다."));
+          }, "image/jpeg", quality);
+        });
+      }
+
+      async function compressPhotoForUpload(file) {
+        const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+        let smallestBlob = null;
+        try {
+          for (const attempt of photoCompressionAttempts) {
+            const scale = Math.min(1, attempt.maxDimension / Math.max(bitmap.width, bitmap.height));
+            const width = Math.max(1, Math.round(bitmap.width * scale));
+            const height = Math.max(1, Math.round(bitmap.height * scale));
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error("사진 압축 화면을 만들지 못했습니다.");
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, width, height);
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = "high";
+            context.drawImage(bitmap, 0, 0, width, height);
+            const blob = await canvasAsJpeg(canvas, attempt.quality);
+            if (!smallestBlob || blob.size < smallestBlob.size) smallestBlob = blob;
+            if (blob.size <= targetCompressedPhotoSize) break;
+          }
+        } finally {
+          bitmap.close();
+        }
+        if (!smallestBlob || smallestBlob.size >= file.size) return file;
+        return new File([smallestBlob], compressedPhotoName(file.name), {
+          type: "image/jpeg",
+          lastModified: file.lastModified
+        });
+      }
+
+      function formatPhotoSize(bytes) {
+        return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
       }
 
       function showToast(message) {
@@ -2603,26 +2663,50 @@
         input.addEventListener("change", syncDisposition);
       });
 
-      function addPhotos(event) {
+      async function addPhotos(event) {
         const files = Array.from(event.target.files || []);
         const remaining = Math.max(0, 5 - state.photos.length);
         const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size <= maxPhotoSize);
-        validFiles.slice(0, remaining).forEach((file) => {
-          state.photos.push({
-            id: `${file.name}-${file.lastModified}-${Math.random()}`,
-            name: file.name,
-            url: URL.createObjectURL(file),
-            file
-          });
-        });
-        if (validFiles.length !== files.length) {
-          showToast("이미지 파일만 첨부할 수 있으며 사진 한 장은 10MB를 넘을 수 없습니다.");
-        } else if (files.length > remaining) {
-          showToast("사진은 최대 5장까지 선택할 수 있습니다.");
-        }
+        const selectedFiles = validFiles.slice(0, remaining);
         event.target.value = "";
-        renderPhotos();
-        refreshSummary();
+        if (!selectedFiles.length) {
+          if (validFiles.length !== files.length) {
+            showToast("이미지 파일만 첨부할 수 있으며 사진 한 장은 10MB를 넘을 수 없습니다.");
+          } else if (files.length > remaining) {
+            showToast("사진은 최대 5장까지 선택할 수 있습니다.");
+          }
+          return;
+        }
+        showToast("사진 전송 용량을 줄이는 중입니다.");
+        const accepted = [];
+        try {
+          for (const file of selectedFiles) {
+            const compressedFile = await compressPhotoForUpload(file);
+            accepted.push({
+              id: `${file.name}-${file.lastModified}-${Math.random()}`,
+              name: compressedFile.name,
+              url: URL.createObjectURL(compressedFile),
+              file: compressedFile
+            });
+          }
+          state.photos.push(...accepted);
+          if (validFiles.length !== files.length) {
+            showToast("이미지 파일만 첨부할 수 있으며 사진 한 장은 10MB를 넘을 수 없습니다.");
+          } else if (files.length > remaining) {
+            showToast("사진은 최대 5장까지 선택할 수 있습니다.");
+          } else {
+            const originalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+            const uploadSize = accepted.reduce((sum, photo) => sum + photo.file.size, 0);
+            showToast(uploadSize < originalSize
+              ? `전송용 사진 ${accepted.length}장을 ${formatPhotoSize(originalSize)}에서 ${formatPhotoSize(uploadSize)}로 줄였습니다.`
+              : `전송용 사진 ${accepted.length}장을 준비했습니다.`);
+          }
+          renderPhotos();
+          refreshSummary();
+        } catch {
+          accepted.forEach((photo) => URL.revokeObjectURL(photo.url));
+          showToast("사진을 압축하지 못했습니다. JPG, PNG 또는 WebP 사진을 다시 선택해주세요.");
+        }
       }
 
       $("gallery-photos").addEventListener("change", addPhotos);
